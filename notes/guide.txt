@@ -584,6 +584,7 @@ error if x is not a symbol.
 > (nom 'foo)
 "foo"
 
+;; i am here <----
 
 10. (wrb x y)
 
