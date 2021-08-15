@@ -336,3 +336,70 @@
   error)."
   'after)
 
+(def bel-ccc
+  "Evaluates f and calls its value on the current continuation. The
+  continuation, if called with one argument, will return it as the
+  value of the ccc expression  (even if you are no longer in the ccc
+  expression or in code called by it).  "
+  'ccc)
+;; todo what are continuations again?
+
+;; todo: implement
+(defn bel-thread
+  "Starts a new thread in which x will be evaluated. Global bindings are
+  shared between threads, but not dynamic ones."
+  [x]
+  x)
+
+;; todo: pg doesn't explicitly say this, but i guess we need to provide `set`?
+
+;; todo: implement
+(defn bel-set [& args]
+  "(set v1 e1 ... vn en)
+
+  it means each vi is globally bound to the value of ei.
+
+  In the source I try not to use things before I've defined them, but
+  I've made a handful of exceptions to make the code easier to read.  "
+  args
+  )
+
+;; todo: I guess we implement def and mac as well?
+(defn bel-def
+  "In the Bel source, when you see an expression of the form
+
+  (set v1 e1 ... vn en)
+
+  it means each vi is globally bound to the value of ei."
+  [n p e]
+  [n p e])
+
+(defn bel-mac
+  "and when you see
+
+  (mac n p e)
+
+  treat it as an abbreviation for
+
+  (set n (lit mac (lit clo nil p e))) "
+  [n p e]
+  [n p e])
+
+"
+todo: this will be important for the reader
+
+Treat an expression in square brackets, e.g.
+
+[f _ x]
+
+as an abbreviation for
+
+(fn (_) (f _ x))
+"
+
+;; okay, now we move onto the source
+
+;; stopa note: def feeling sicp vibes -- the recusing on car cdr
+
+;; stopa note: def cons args -- interesting: no parens on (args) -- maybe syntax sugar?
+
