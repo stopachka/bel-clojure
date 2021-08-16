@@ -114,7 +114,6 @@ and streams are atoms.
 
 Instances of the four fundamental types are called objects.
 
-
 Lists
 
 We can use pairs to build lots of different data structures, but the
