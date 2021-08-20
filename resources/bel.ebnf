@@ -1,6 +1,5 @@
-sexp = string | list | pair | char | symbol
+sexp = string | list | char | symbol | dot
 list = lparen sexp (<whitespace> sexp)* rparen
-pair = lparen sexp <whitespace> <dot> <whitespace> sexp rparen
 <lparen> = <'('>
 <rparen> = <')'>
 string = <'"'> any_char* <'"'>

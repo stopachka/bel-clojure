@@ -74,10 +74,10 @@ is probably a reason for it.
 
 Data
 
-Bel has four fundamental data types: 
+Bel has four fundamental data types:
 
-symbols, 
-pairs, 
+symbols,
+pairs,
 characters, and
 streams.
 
@@ -200,7 +200,6 @@ can also be represented as
 "hello"
 
 and will when possible be displayed that way.
-
 
 Truth
 
