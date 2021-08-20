@@ -74,7 +74,11 @@ is probably a reason for it.
 
 Data
 
-Bel has four fundamental data types: symbols, pairs, characters, and
+Bel has four fundamental data types: 
+
+symbols, 
+pairs, 
+characters, and
 streams.
 
 Symbols are words:

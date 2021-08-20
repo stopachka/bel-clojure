@@ -1,4 +1,4 @@
-(ns interpreter
+(ns interpreter-old
   (:require [clojure.java.shell :refer [sh]]))
 
 ;; notes

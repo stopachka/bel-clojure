@@ -1,0 +1,12 @@
+sexp = string | list | pair | char | symbol
+list = lparen sexp (<whitespace> sexp)* rparen
+pair = lparen sexp <whitespace> <dot> <whitespace> sexp rparen
+<lparen> = <'('>
+<rparen> = <')'>
+string = <'"'> any_char* <'"'>
+char = <'\\'> name
+symbol = name
+name = #'[a-zA-Z!\-*+_]+'
+any_char = #'.'
+whitespace = #'\s+'
+dot = #'\.'
