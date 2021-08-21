@@ -1,11 +1,12 @@
-sexp = string | list | char | symbol | dot
+sexp = string | list | quote | char | symbol | dot
 list = lparen sexp (<whitespace> sexp)* rparen
 <lparen> = <'('>
 <rparen> = <')'>
 string = <'"'> any_char* <'"'>
 char = <'\\'> name
 symbol = name
+dot = #'\.'
+quote = <'\''> sexp
 name = #'[a-zA-Z!\-*+_]+'
 any_char = #'.'
 whitespace = #'\s+'
-dot = #'\.'
