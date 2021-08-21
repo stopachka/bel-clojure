@@ -10,6 +10,7 @@
 ;; ------
 
 (def bel-nil [:symbol "nil"])
+(def bel-t [:symbol "t"])
 
 (def parse-string
   (-> "bel.ebnf"
@@ -100,6 +101,63 @@
   ;; uh oh
   (bel-parse "(a . b)")
   (bel-parse "(a b . c)"))
+
+;; Primitives
+;; ----------
+
+(defn p-id [[t-a :as a] b]
+  (let [id-f (if (= t-a :pair) identical? =)]
+    (if (id-f a b)
+      bel-t
+      bel-nil)))
+(comment
+  (p-id (bel-parse "a") (bel-parse "a"))
+  (p-id (bel-parse "a") (bel-parse "b"))
+  (p-id (bel-parse "(a)") (bel-parse "(a)")))
+
+(def p-join make-pair)
+
+(defn p-car [[t l _r :as form]]
+  (cond
+    (= bel-nil form) form
+
+    ;; TODO: is this err the right thing?
+    ;; perhaps delegate to `err` fn
+    (not= :pair t)
+    (throw (Exception. "expected pair"))
+
+    :else
+    l))
+
+(comment
+  (p-car (bel-parse "(a b c)"))
+  (p-car (bel-parse "nil")))
+
+(defn p-cdr [[t _l r :as form]]
+  (cond
+    (= bel-nil form) form
+
+    ;; TODO: is this err the right thing?
+    ;; perhaps delegate to `err` fn
+    (not= :pair t)
+    (throw (Exception. "expected pair"))
+
+    :else
+    r)
+  )
+
+(comment
+  (p-cdr (bel-parse "(a . b)"))
+  (p-cdr (bel-parse "(a b)"))
+  (p-cdr (bel-parse "nil")))
+
+(defn p-type [[t]]
+  [:symbol (name t)])
+
+(comment
+  (p-type (bel-parse "a"))
+  (p-type (bel-parse "(a)"))
+  (p-type (bel-parse "\\a")))
 
 ;; Evaluator
 ;; ---------
