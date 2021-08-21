@@ -1,5 +1,5 @@
 sexp = string | list | quote | char | symbol | dot
-list = lparen sexp (<whitespace> sexp)* rparen
+list = lparen sexp? (<whitespace> sexp)* rparen
 <lparen> = <'('>
 <rparen> = <')'>
 string = <'"'> any_char* <'"'>
