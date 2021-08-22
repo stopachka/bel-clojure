@@ -16,6 +16,8 @@
 (def bel-dot [:dot "."])
 (def bel-lit [:symbol "lit"])
 (def bel-prim [:symbol "prim"])
+(def bel-o [:symbol "o"])
+(def bel-apply [:symbol "apply"])
 
 (def parse-string
   (-> "bel.ebnf"
@@ -199,7 +201,10 @@
 
 (comment (p-coin))
 
-(def prim->fn
+;; Globe & Scope
+;; -------------
+
+(def prim-name->fn
   {"id" #'p-id
    "car" #'p-car
    "cdr" #'p-cdr
@@ -211,26 +216,36 @@
    "nom" #'p-nom
    "coin" #'p-coin})
 
+(def bel-globe
+  (->> prim-name->fn
+       (map (fn [[k]]
+              (make-pair
+               [:symbol k]
+               (<-pairs [bel-lit bel-prim [:symbol k]]))))
+       <-pairs))
+
+(def bel-scope bel-nil)
+
 ;; Evaluator
 ;; ---------
 
 (declare bel-eval)
 
-(defn eval-symbol [env [_ v :as form]]
-  (cond
-    (#{"t" "nil" "o" "apply"} v)
+(defn eval-symbol [env form]
+  (if
+   (#{bel-nil bel-t bel-o bel-apply} form)
     form
-
-    (prim->fn v)
-    (<-pairs [bel-lit bel-prim form])
-
-    :else
-    (throw
-     (Exception. "todo: implement fetch var"))))
+    (->> env
+         pair->clojure-seq
+         (filter (fn [[_ sym]]
+                   (= form sym)))
+         first
+         (drop 2)
+         first)))
 
 (defn exec-prim [r args]
   (let [[_ [_ n]] r
-        f (prim->fn n)
+        f (prim-name->fn n)
         niled-args (->> f
                         meta
                         :arglists
@@ -247,14 +262,15 @@
     :else
     (let [[f & args] (map (partial bel-eval env)
                           (pair->clojure-seq x))
+
           [_ lit [_ t r]] f
           _ (assert (= bel-lit lit)
                     "error: expected lit expression as fn call")]
-      (condp = t
+       (condp = t
         bel-prim
         (exec-prim r args)
 
-        (throw (Exception. "unsupported fn call"))))))
+        (throw (Exception. "todo: unsupported fn call"))))))
 
 (defn bel-eval [env [t :as form]]
   (condp = t
@@ -264,18 +280,22 @@
     :pair
     (eval-pair env form)))
 
-(def global-env {})
-
 (comment
-  (bel-eval global-env (bel-parse "nil"))
-  (bel-eval global-env (bel-parse "'foo"))
-  (bel-eval global-env (bel-parse "\"foo\""))
-  (bel-eval global-env (bel-parse "(lit (foo bar baz))"))
-  (bel-eval global-env (bel-parse "car"))
-  (bel-eval global-env (bel-parse "(id t nil)"))
-  (bel-eval global-env (bel-parse "(id t t)"))
-  (bel-eval global-env (bel-parse "(id t)"))
-  (bel-eval global-env (bel-parse "(id)")))
+  (bel-eval bel-globe (bel-parse "nil"))
+  (bel-eval bel-globe (bel-parse "'foo"))
+  (bel-eval bel-globe (bel-parse "\"foo\""))
+  (bel-eval bel-globe (bel-parse "(lit (foo bar baz))"))
+  (bel-eval bel-globe (bel-parse "car"))
+  (bel-eval bel-globe (bel-parse "(id t nil)"))
+  (bel-eval bel-globe (bel-parse "(id t t)"))
+  (bel-eval bel-globe (bel-parse "(id t)"))
+  (bel-eval bel-globe (bel-parse "(id)")))
 
 ;; Source Reader
 ;; -------------
+
+;; next, let's get set working
+;; next, let's just get lit clo with nil working
+;; this'll help us think about bel-globe
+;; then, we can think about scope
+
