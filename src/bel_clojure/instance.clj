@@ -7,8 +7,9 @@
   (:import
    (java.util ArrayList)))
 
-;; Reader
-;; ------
+;; Constants
+;; ---------
+
 
 (def bel-quote [:symbol "quote"])
 (def bel-nil [:symbol "nil"])
@@ -19,11 +20,10 @@
 (def bel-o [:symbol "o"])
 (def bel-apply [:symbol "apply"])
 
-(def parse-string
-  (-> "bel.ebnf"
-      io/resource
-      slurp
-      insta/parser))
+;; Reader
+;; ------
+
+(def parse-string (-> "bel.ebnf" io/resource insta/parser))
 
 (defn form-transform
   [k f]
@@ -294,6 +294,9 @@
 ;; Source Reader
 ;; -------------
 
+;; make a decision: how should I handle the pair data struct?
+;;  if I use the arraylist, than I have to re-implement all the seq stuff
+;;  but if I _don't_ -- than what? I make my own? a mutable v?
 ;; next, let's get set working
 ;; next, let's just get lit clo with nil working
 ;; this'll help us think about bel-globe
