@@ -85,12 +85,6 @@
                   (fn [[_ exp]]
                     (make-quoted-pair exp))))
 
-(defmacro defjacky [n code]
-  `(def ~(symbol (str "jacky-" (name n)))
-     ~code
-     )
-  )
-
 (def bel-parse
   (comp
    (partial
@@ -399,8 +393,8 @@
    and build up this interpreter"
   []
   (->> (-> (io/resource "source.bel")
-        slurp
-        (cstring/split #"\n"))
+           slurp
+           (cstring/split #"\n"))
        (partition-by cstring/blank?)
        (map (fn [xs] (cstring/join "\n" xs)))
        (remove (fn [s]
