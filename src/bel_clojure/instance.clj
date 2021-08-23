@@ -405,3 +405,7 @@
 
 (comment
   (apply run (readable-source)))
+
+
+; next up, let's stop using pair->clojure-seq -- just create pair helper fns
+; then, do the smarter assignment for sym -> val on lambda
