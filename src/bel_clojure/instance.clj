@@ -10,7 +10,6 @@
 ;; Constants
 ;; ---------
 
-
 (def bel-quote [:symbol "quote"])
 (def bel-nil [:symbol "nil"])
 (def bel-t [:symbol "t"])
@@ -19,6 +18,12 @@
 (def bel-prim [:symbol "prim"])
 (def bel-o [:symbol "o"])
 (def bel-apply [:symbol "apply"])
+(def bel-set [:symbol "set"])
+(def bel-clo [:symbol "clo"])
+(def bel-mac [:symbol "mac"])
+(def bel-globe [:symbol "globe"])
+(def bel-scope [:symbol "scope"])
+(def bel-if [:symbol "if"])
 
 ;; Reader
 ;; ------
@@ -80,6 +85,12 @@
                   (fn [[_ exp]]
                     (make-quoted-pair exp))))
 
+(defmacro defjacky [n code]
+  `(def ~(symbol (str "jacky-" (name n)))
+     ~code
+     )
+  )
+
 (def bel-parse
   (comp
    (partial
@@ -116,7 +127,10 @@
   (p-id (bel-parse "a") (bel-parse "b"))
   (p-id (bel-parse "(a)") (bel-parse "(a)")))
 
-(def p-join make-pair)
+(defn p-join [a b] (make-pair a b))
+
+(comment
+  (p-join (bel-parse "a") (bel-parse "b")))
 
 (defn p-car [[t l _r :as form]]
   (cond
@@ -216,7 +230,7 @@
    "nom" #'p-nom
    "coin" #'p-coin})
 
-(def bel-globe
+(defn make-bel-globe []
   (->> prim-name->fn
        (map (fn [[k]]
               (make-pair
@@ -224,27 +238,46 @@
                (<-pairs [bel-lit bel-prim [:symbol k]]))))
        <-pairs))
 
-(def bel-scope bel-nil)
-
 ;; Evaluator
 ;; ---------
 
 (declare bel-eval)
 
-(defn eval-symbol [env form]
-  (if
-   (#{bel-nil bel-t bel-o bel-apply} form)
-    form
-    (->> env
-         pair->clojure-seq
-         (filter (fn [[_ sym]]
-                   (= form sym)))
-         first
-         (drop 2)
-         first)))
+(defn find-val [sym-to-find pairs]
+  (some->> pairs
+           pair->clojure-seq
+           (filter (fn [[_ sym]]
+                     (= sym-to-find sym)))
+           first
+           p-cdr))
 
-(defn exec-prim [r args]
+(defn eval-symbol [{:keys [scope globe]} form]
+  (cond
+    (#{bel-nil bel-t bel-o bel-apply} form) form
+    (= bel-globe form) globe
+    (= bel-scope form) scope
+    :else
+    (let [v (->> [scope globe]
+                 (some (partial find-val form)))]
+      (assert v (format "expected value for symbol = %s" form))
+
+      v)))
+
+(comment
+  (eval-symbol {:globe (make-bel-globe)} [:symbol "id"]))
+
+(defn map-pair [f p]
+  (if (= bel-nil p) bel-nil
+      (make-pair
+       (f (p-car p))
+       (map-pair f (p-cdr p)))))
+
+(defn args-head->evaled-args-seq [env args-head]
+  (map (partial bel-eval env) (pair->clojure-seq args-head)))
+
+(defn exec-prim [env r args-head]
   (let [[_ [_ n]] r
+        args (args-head->evaled-args-seq env args-head)
         f (prim-name->fn n)
         niled-args (->> f
                         meta
@@ -252,24 +285,74 @@
                         first
                         (map-indexed (fn [i _] (nth args i bel-nil))))
         _ (assert (<= (count args) (count niled-args))
-                  "too many args")]
+                  (format
+                   "too many args = %s niled-args = %s niled-args" args niled-args))]
+
     (apply f niled-args)))
+
+(defn make-var-pair [[sym-t :as sym] evaled]
+  (assert (= :symbol sym-t)
+          (format
+           "expected left-side of set to be a symbol = %s" sym))
+  (make-pair sym evaled))
+
+(defn exec-set [{:keys [globe] :as env} [_ _ r]]
+  (->> r
+       pair->clojure-seq
+       (partition 2)
+       (map (fn [[sym v]]
+              (let [to-set (bel-eval env v)
+                    [_ head tail] globe]
+                (p-xar globe (make-var-pair sym to-set))
+                (p-xdr globe (make-pair head tail)))))
+       doall))
+
+(defn exec-clo [env r args-seq]
+  (let [[scope args-var-head body-head] (pair->clojure-seq r)
+        args-vars (pair->clojure-seq args-var-head)
+        new-scope
+        (reduce (fn [s p] (make-pair p s))
+                scope
+                (map make-var-pair args-vars args-seq))]
+    (bel-eval
+     (assoc env :scope new-scope)
+     body-head)))
+
+(defn exec-mac [env r args-head]
+  (let [code (exec-clo
+              env
+              (p-cdr (p-cdr (p-car r)))
+              (pair->clojure-seq args-head))]
+    (bel-eval env code)))
+
+(defn eval-if [env [_ test-form [_ consequent-form r]]]
+  (if (not= (bel-eval env test-form)
+            bel-nil)
+    (bel-eval env consequent-form)
+    (cond
+      (= bel-nil r) r
+      (= bel-nil (p-cdr r)) (bel-eval env (p-car r))
+      :else (eval-if env r))))
 
 (defn eval-pair [env [_ l r :as x]]
   (cond
     (= bel-quote l) r
     (= bel-lit l) x
+    (= bel-set l) (exec-set env x)
+    (= bel-if l) (eval-if env r)
     :else
-    (let [[f & args] (map (partial bel-eval env)
-                          (pair->clojure-seq x))
-
-          [_ lit [_ t r]] f
+    (let [[_ f args-head] x
+          evaled-f (bel-eval env f)
+          [_ lit [_ t r]] evaled-f
           _ (assert (= bel-lit lit)
                     "error: expected lit expression as fn call")]
-       (condp = t
+      (condp = t
         bel-prim
-        (exec-prim r args)
-
+        (exec-prim env r args-head)
+        bel-clo
+        (exec-clo env r (args-head->evaled-args-seq env args-head))
+        bel-mac
+        (exec-mac env r args-head)
         (throw (Exception. "todo: unsupported fn call"))))))
 
 (defn bel-eval [env [t :as form]]
@@ -280,25 +363,52 @@
     :pair
     (eval-pair env form)))
 
+(defn run [& ss]
+  (let [globe (make-bel-globe)]
+    (->> ss
+         (map (fn [s] (bel-eval {:globe globe} (bel-parse s))))
+         doall
+         last)))
+
 (comment
-  (bel-eval bel-globe (bel-parse "nil"))
-  (bel-eval bel-globe (bel-parse "'foo"))
-  (bel-eval bel-globe (bel-parse "\"foo\""))
-  (bel-eval bel-globe (bel-parse "(lit (foo bar baz))"))
-  (bel-eval bel-globe (bel-parse "car"))
-  (bel-eval bel-globe (bel-parse "(id t nil)"))
-  (bel-eval bel-globe (bel-parse "(id t t)"))
-  (bel-eval bel-globe (bel-parse "(id t)"))
-  (bel-eval bel-globe (bel-parse "(id)")))
+  (run "nil")
+  (run "'foo")
+  (run "\"foo\"")
+  (run "(lit (foo bar baz))")
+  (run "car")
+  (run "(car '(a b))")
+  (run "(id t nil)")
+  (run "(id t t)")
+  (run "(id t)")
+  (run "(id)")
+  (run "(set a 'b)" "a")
+  (run "((lit clo nil (x) (id x t)) t)")
+  (run "((lit clo nil (x) (id x t)) nil)")
+  (run "globe")
+  (run "(if nil a)")
+  (run "(if t 'a)")
+  (run "(if nil 'a 'b)")
+  (run "(if nil a nil b t 'c)"))
 
 ;; Source Reader
 ;; -------------
 
-;; make a decision: how should I handle the pair data struct?
-;;  if I use the arraylist, than I have to re-implement all the seq stuff
-;;  but if I _don't_ -- than what? I make my own? a mutable v?
-;; next, let's get set working
-;; next, let's just get lit clo with nil working
-;; this'll help us think about bel-globe
-;; then, we can think about scope
+(defn readable-source
+  "I've added a BREAK character. This way,
+   we can incrementally evaluate the source,
+   and build up this interpreter"
+  []
+  (->> (-> (io/resource "source.bel")
+        slurp
+        (cstring/split #"\n"))
+       (partition-by cstring/blank?)
+       (map (fn [xs] (cstring/join "\n" xs)))
+       (remove (fn [s]
+                 (cstring/starts-with? s ";")))
 
+       (remove cstring/blank?)
+       (take-while
+        (fn [s] (not= s "===BREAK===")))))
+
+(comment
+  (apply run (readable-source)))
