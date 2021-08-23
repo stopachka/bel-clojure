@@ -1,6 +1,6 @@
 # bel-clojure
 
-Play: Let's create an interpreter _for_ PG's Bel Interpreter, and run Bel on top of Clojure!
+Play: Let's create an interpreter for PG's Bel Interpreter, and run Bel on top of Clojure!
 
 I started this to understand his work on Bel -- what better way than to follow the guide, and implement a live version?
 
@@ -10,5 +10,5 @@ We'll write a minimal interpreter -- something _just_ goood enough to interprete
 
 Note:
 
-I won't be making optimizations, and since this is an interpreter on an interpreter, it will likely be slow. However, it can start as a REPL for the language. And who knows, one day we could optimize it and make it work for real-world programs.
+I won't be making optimizations, and since this is an interpreter on an interpreter, it will be slow. However, it can start as a REPL for the language. And who knows, one day we could optimize it and make it work for real-world programs.
 
