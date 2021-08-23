@@ -28,8 +28,6 @@
 ;; Reader
 ;; ------
 
-(def parse-string (-> "bel.ebnf" io/resource insta/parser))
-
 (defn form-transform
   [k f]
   (fn [x]
@@ -38,8 +36,6 @@
          (= (first x) k))
       (f x)
       x)))
-
-(def unwrap-sexp (form-transform :sexp second))
 
 (defn make-pair [a b]
   (ArrayList. [:pair a b]))
@@ -50,6 +46,8 @@
 (defn first-and-only [xs msg]
   (assert (= (count xs) 1) msg)
   (first xs))
+
+(def unwrap-sexp (form-transform :sexp second))
 
 (defn <-pairs [xs]
   (let [[x n & after-n] xs
@@ -85,17 +83,18 @@
                   (fn [[_ exp]]
                     (make-quoted-pair exp))))
 
-(def bel-parse
+(def parse-string (-> "bel.ebnf" io/resource insta/parser))
+
+(def parse-postwalk
   (comp
-   (partial
-    walk/postwalk
-    (comp
-     list->pair
-     string->pair
-     quote->pair
-     unwrap-name
-     unwrap-sexp))
-   parse-string))
+   list->pair
+   string->pair
+   quote->pair
+   unwrap-name
+   unwrap-sexp))
+
+(def bel-parse
+  (comp (partial walk/postwalk parse-postwalk) parse-string))
 
 (comment
   (bel-parse "\"str\"")
@@ -209,7 +208,7 @@
 
 (comment (p-coin))
 
-;; Globe & Scope
+;; Globe
 ;; -------------
 
 (def prim-name->fn
