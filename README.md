@@ -15,7 +15,7 @@ I won't be making optimizations, and since this is an interpreter on an interpre
 # Dev
 
 ```
-PORT=4000 clj -R:nREPL -m nrepl.cmdline -p 3434 -i
+clj -R:nREPL -m nrepl.cmdline -p 3434 -i
 > (require 'bel-clojure.instance)
 > (in-ns 'bel-clojure.instance)
 > (run "(id t t)") ; run snippets of code
