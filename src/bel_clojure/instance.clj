@@ -24,6 +24,7 @@
 (def bel-globe [:symbol "globe"])
 (def bel-scope [:symbol "scope"])
 (def bel-if [:symbol "if"])
+(def bel-apply [:symbol "apply"])
 
 ;; Pair
 ;; ----
@@ -297,7 +298,7 @@
           (format "expected left-side of to be a symbol = %s" sym))
   (make-pair sym v))
 
-(defn eval-set [{:keys [globe] :as env} [_ _ r]]
+(defn eval-set [{:keys [globe] :as env} r]
   (letfn [(f [p]
             (let [[_ sym after-sym] p
                   _ (assert (not= bel-nil after-sym)
@@ -319,9 +320,6 @@
       (= num-nil 2)
       scope
 
-      (= num-nil 1)
-      (throw (Exception. "Symbols and argument lengths don't match!"))
-
       (= :symbol sym-t)
       (make-pair
        (make-env-pair sym-head arg-head)
@@ -336,6 +334,9 @@
        (p-cdr sym-head)
        (p-cdr arg-head)))))
 
+(comment
+  (add-to-scope bel-nil (bel-parse "(x y)") (bel-parse "(a b)"))
+  (add-to-scope bel-nil (bel-parse "(x . y)") (bel-parse "(a b c)")))
 
 (defn eval-clo [env r args-head]
   (let [[_ scope [_ args-sym-head [_ body-head]]] r
@@ -358,26 +359,50 @@
 (defn eval-pairs [env head]
   (pair-map (partial bel-eval env) head))
 
+(defn apply-head->args-head [x]
+  (let [xs (pair->clojure-seq x)
+        but-last (drop-last xs)
+        [last-t :as l] (last xs)
+        ls (if (= :pair last-t)
+             (pair->clojure-seq l)
+             [l])]
+    (<-pairs (concat but-last ls))))
+
+(defn assert-lit [[_ lit :as form]]
+  (assert (= bel-lit lit) "expected lit expression")
+  form)
+
+(defn lit-type [[_ _lit [_ t]]] t)
+
+(defn lit-v [[_ _lit [_ _t v]]] v)
+
+(defn eval-lit-f [env lit args-head]
+  (condp = (lit-type lit)
+    bel-prim
+    (eval-prim env (lit-v lit) args-head)
+    bel-clo
+    (eval-clo env (lit-v lit) args-head)
+    (throw (Exception. "err unsupported fn call"))))
+
+(defn eval-apply [env [_ f apply-head]]
+  (eval-lit-f
+   env
+   (assert-lit (bel-eval env f))
+   (apply-head->args-head (eval-pairs env apply-head))))
+
 (defn eval-pair [env [_ l r :as x]]
   (cond
     (= bel-quote l) r
     (= bel-lit l) x
-    (= bel-set l) (eval-set env x)
+    (= bel-set l) (eval-set env r)
     (= bel-if l) (eval-if env r)
+    (= bel-apply l) (eval-apply env r)
     :else
     (let [[_ f args-head] x
-          evaled-f (bel-eval env f)
-          [_ lit [_ t r]] evaled-f
-          _ (assert (= bel-lit lit)
-                    "error: expected lit expression as fn call")]
-      (condp = t
-        bel-prim
-        (eval-prim env r (eval-pairs env args-head))
-        bel-clo
-        (eval-clo env r (eval-pairs env args-head))
-        bel-mac
-        (eval-mac env r args-head)
-        (throw (Exception. "todo: unsupported fn call"))))))
+          evaled-lit (assert-lit (bel-eval env f))]
+      (if (= bel-mac (lit-type evaled-lit))
+        (eval-mac env (lit-v evaled-lit) args-head)
+        (eval-lit-f env evaled-lit (eval-pairs env args-head))))))
 
 (defn bel-eval [env [t :as form]]
   (condp = t
@@ -406,6 +431,8 @@
   (run "(id t)")
   (run "(id)")
   (run "(set a 'b c 'd)" "c")
+  (run "(apply join '(a b))")
+  (run "(apply join 'a '(b))")
   (run "((lit clo nil (x) (id x t)) t)")
   (run "((lit clo nil (x) (id x t)) nil)")
   (run "globe")

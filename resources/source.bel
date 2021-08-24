@@ -41,8 +41,6 @@
       (car xs)
       (f (car xs) (reduce f (cdr xs)))))
 
-===BREAK===
-
 (def cons args
   (reduce join args))
 
@@ -67,10 +65,24 @@
                     (cons (apply f (map car ls))
                           (apply map f (map cdr ls)))))
 
+; stopa-edit
+; poor man's mac, to support mac until PG defines it
+
+(set
+ mac
+ (lit
+  mac
+  (lit
+   clo nil (n p e)
+   (list 'set n (list 'mac (list 'lit 'clo nil p e))))))
+
+===BREAK===
+
 (mac fn (parms . body)
   (if (no (cdr body))
       `(list 'lit 'clo scope ',parms ',(car body))
       `(list 'lit 'clo scope ',parms '(do ,@body))))
+
 
 (set vmark (join))
 
