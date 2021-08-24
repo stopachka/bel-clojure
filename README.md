@@ -12,3 +12,13 @@ Note:
 
 I won't be making optimizations, and since this is an interpreter on an interpreter, it will be slow. However, it can start as a REPL for the language. And who knows, one day we could optimize it and make it work for real-world programs.
 
+# Dev
+
+```
+PORT=4000 clj -R:nREPL -m nrepl.cmdline -p 3434 -i
+> (require 'bel-clojure.instance)
+> (in-ns 'bel-clojure.instance)
+> (run "(id t t)") ; run snippets of code
+> (apply run (readable-source)) ; reads source until the breakpoint
+```
+

@@ -59,18 +59,17 @@
        (f (p-car p))
        (pair-map f (p-cdr p)))))
 
-(defn p-append [a b]
+(defn pair-append [a b]
   (cond
     (= bel-nil a) b
     (= bel-nil (p-cdr a)) (make-pair (p-car a) b)
     :else
     (make-pair
      (p-car a)
-     (p-append (p-cdr a) b))))
+     (pair-append (p-cdr a) b))))
 
 ;; Reader
 ;; ------
-
 
 (defn form-transform
   [k f]
@@ -427,7 +426,7 @@
                     (bel-eval env (second h))
                     (eval-backquoted-form env r))
 
-    (= h-t :splice) (p-append
+    (= h-t :splice) (pair-append
                      (bel-eval env (second h))
                      (eval-backquoted-form env r))
 
