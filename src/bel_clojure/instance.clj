@@ -24,7 +24,6 @@
 (def bel-globe [:symbol "globe"])
 (def bel-scope [:symbol "scope"])
 (def bel-if [:symbol "if"])
-(def bel-apply [:symbol "apply"])
 
 ;; Pair
 ;; ----
@@ -59,6 +58,15 @@
       (make-pair
        (f (p-car p))
        (pair-map f (p-cdr p)))))
+
+(defn p-append [a b]
+  (cond
+    (= bel-nil a) b
+    (= bel-nil (p-cdr a)) (make-pair (p-car a) b)
+    :else
+    (make-pair
+     (p-car a)
+     (p-append (p-cdr a) b))))
 
 ;; Reader
 ;; ------
@@ -134,7 +142,8 @@
   (bel-parse "\\bel")
   (bel-parse "(a . b)")
   (bel-parse "(a b . c)")
-  (bel-parse "()"))
+  (bel-parse "()")
+  (bel-parse "`(foo ,a ,@b)"))
 
 ;; Primitives
 ;; ----------
@@ -160,7 +169,7 @@
     (= bel-nil form) form
 
     (not= :pair t)
-    (throw (Exception. "expected pair"))
+    (throw (Exception. (format "expected pair, got = %s" form)))
 
     :else
     l))
@@ -404,18 +413,60 @@
         (eval-mac env (lit-v evaled-lit) args-head)
         (eval-lit-f env evaled-lit (eval-pairs env args-head))))))
 
-(defn bel-eval [env [t :as form]]
-  (condp = t
-    :char form
-    :symbol
-    (eval-symbol env form)
-    :pair
-    (eval-pair env form)))
+(defn eval-backquoted-form [env [t [h-t :as h] r :as form]]
+  (cond
+    (= t :comma) (bel-eval env (second form))
+
+    (not= t :pair) form
+
+    (= :quote h-t) (make-pair
+                    (make-quoted-pair (eval-backquoted-form env (second h)))
+                    (eval-backquoted-form env r))
+
+    (= h-t :comma) (make-pair
+                    (bel-eval env (second h))
+                    (eval-backquoted-form env r))
+
+    (= h-t :splice) (p-append
+                     (bel-eval env (second h))
+                     (eval-backquoted-form env r))
+
+    (= h-t :pair) (make-pair
+                   (eval-backquoted-form env h)
+                   (eval-backquoted-form env r))
+
+    :else (make-pair h (eval-backquoted-form env r))))
+
+(defn eval-backquote [env [_ r]]
+  (eval-backquoted-form env r))
+
+(comment
+  (eval-backquote
+   {:scope (bel-parse "((b . foo) (d . bar))")}
+   (bel-parse "`(a ,b (c ,d))"))
+  (eval-backquote
+   {:scope (bel-parse "((b . (b c)))")}
+   (bel-parse "`(a (b c ,@b) d e)"))
+  (eval-backquote
+   {:globe (make-bel-globe)
+    :scope (bel-parse "((parms . (a)) (body . (inc id a)))")}
+   (bel-parse "`(',parms ',(car body))")))
+
+(defn bel-eval [env form]
+  (let [[t] form]
+    (condp = t
+      :char form
+      :symbol
+      (eval-symbol env form)
+      :pair
+      (eval-pair env form)
+      :backquote
+      (eval-backquote env form))))
 
 (defn run [& ss]
   (let [globe (make-bel-globe)]
     (->> ss
-         (map (fn [s] (bel-eval {:globe globe} (bel-parse s))))
+         (map (fn [s] (bel-eval {:globe globe :scope bel-nil} (bel-parse s))))
          doall
          last)))
 
@@ -439,7 +490,8 @@
   (run "(if nil a)")
   (run "(if t 'a)")
   (run "(if nil 'a 'b)")
-  (run "(if nil a nil b t 'c)"))
+  (run "(set a 'foo b '(bar baz))"
+       "`(foo ',a ,@b)"))
 
 ;; Source Reader
 ;; -------------
@@ -464,5 +516,4 @@
 (comment
   (apply run (readable-source)))
 
-; next up, let's stop using pair->clojure-seq -- just create pair helper fns
-; then, do the smarter assignment for sym -> val on lambda
+; next up -- what should happen if we see (fn ((nil .nil) x) y) ?

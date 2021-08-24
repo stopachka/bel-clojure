@@ -74,20 +74,35 @@
   mac
   (lit
    clo nil (n p e)
-   (list 'set n (list 'mac (list 'lit 'clo nil p e))))))
+   (join 'set
+         (join
+          n
+          (join
+           (join
+            'lit
+            (join
+             'mac
+             (join
+              (join
+               'lit (join 'clo (join nil (join p (join e nil)))))
+              nil)))
+           nil))))))
 
-===BREAK===
+; /stopa-edit
 
 (mac fn (parms . body)
   (if (no (cdr body))
       `(list 'lit 'clo scope ',parms ',(car body))
       `(list 'lit 'clo scope ',parms '(do ,@body))))
 
-
 (set vmark (join))
 
 (def uvar ()
   (list vmark))
+
+(uvar)
+
+===BREAK===
 
 (mac do args
   (reduce (fn (x y)
