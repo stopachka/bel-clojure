@@ -357,7 +357,7 @@
 
 (comment
   (add-to-scope bel-nil (bel-parse "(x y)") (bel-parse "(a b)"))
-  (add-to-scope bel-nil (bel-parse "(x . y)") (bel-parse "(a b c)")))
+  (add-to-scope bel-nil (bel-parse "(x y . z)") (bel-parse "(a b c d)")))
 
 (defn eval-clo [env r args-head]
   (let [[_ scope [_ args-sym-head [_ body-head]]] r

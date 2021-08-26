@@ -147,8 +147,6 @@
                        (and (apply = (map car args))
                             (apply = (map cdr args)))))
 
-globe
-
 ===BREAK===
 
 (def symbol (x) (= (type x) 'symbol))
@@ -158,7 +156,6 @@ globe
 (def char   (x) (= (type x) 'char))
 
 (def stream (x) (= (type x) 'stream))
-
 
 (def proper (x)
   (or (no x)
