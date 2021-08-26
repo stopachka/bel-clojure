@@ -100,14 +100,17 @@
 (def uvar ()
   (list vmark))
 
-(uvar)
-
-===BREAK===
+; stopa-edit
+; changing (uvar) in `do`, as I am not sure what that
+; should mean. Pinged PG. Meanwhile will use a variable
+; unlikely to be used by others
 
 (mac do args
   (reduce (fn (x y)
-            (list (list 'fn (uvar) y) x))
+            (list (list 'fn 'thisargwontbeusedwehope y) x))
           args))
+
+; /stopa-edit
 
 (mac let (parms val . body)
   `((fn (,parms) ,@body) ,val))
@@ -121,16 +124,26 @@
 (mac mac (n . rest)
   `(set ,n (macro ,@rest)))
 
+; stopa-edit
+; removing use of uvar here till we figure out
+; how it's supposed to work
+
 (mac or args
   (if (no args)
       nil
-      (let v (uvar)
+      (let v 'thisargwontclobberwehope
         `(let ,v ,(car args)
            (if ,v ,v (or ,@(cdr args)))))))
+
+; /stopa-edit
 
 (mac and args
   (reduce (fn es (cons 'if es))
           (or args '(t))))
+
+(apply or '(nil nil))
+
+===BREAK===
 
 (def = args
   (if (no (cdr args))  t

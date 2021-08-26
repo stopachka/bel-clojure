@@ -515,4 +515,6 @@
 (comment
   (apply run (readable-source)))
 
-; next up -- what should happen if we see (fn ((nil .nil) x) y) ?
+; next up
+; make macros work with apply
+; waiting: -- what should happen if we see (fn ((nil .nil) x) y)
