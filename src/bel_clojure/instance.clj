@@ -120,6 +120,16 @@
                   (fn [[_ exp]]
                     (make-quoted-pair exp))))
 
+
+(def abbrev-fn->pair
+  (form-transform :abbrev_fn
+                  (fn [[_ & xs]]
+                    (make-pair
+                       [:symbol "fn"]
+                       (make-pair
+                         (make-pair [:symbol "_"] bel-nil)
+                         (<-pairs xs))))))
+
 (def parse-string (-> "bel.ebnf" io/resource insta/parser))
 
 (def parse-postwalk
@@ -128,7 +138,8 @@
    string->pair
    quote->pair
    unwrap-name
-   unwrap-sexp))
+   unwrap-sexp
+   abbrev-fn->pair))
 
 (def bel-parse
   (comp (partial walk/postwalk parse-postwalk) parse-string))
@@ -142,7 +153,9 @@
   (bel-parse "(a . b)")
   (bel-parse "(a b . c)")
   (bel-parse "()")
-  (bel-parse "`(foo ,a ,@b)"))
+  (bel-parse "`(foo ,a ,@b)")
+  (bel-parse "=")
+  (bel-parse "[f _ x]"))
 
 ;; Primitives
 ;; ----------
@@ -384,16 +397,18 @@
 
 (defn lit-v [[_ _lit [_ _t v]]] v)
 
-(defn eval-lit-f [env lit args-head]
+(defn eval-lit [env lit args-head]
   (condp = (lit-type lit)
     bel-prim
     (eval-prim env (lit-v lit) args-head)
     bel-clo
     (eval-clo env (lit-v lit) args-head)
+    bel-mac
+    (eval-mac env (lit-v lit) args-head)
     (throw (Exception. "err unsupported fn call"))))
 
 (defn eval-apply [env [_ f apply-head]]
-  (eval-lit-f
+  (eval-lit
    env
    (assert-lit (bel-eval env f))
    (apply-head->args-head (eval-pairs env apply-head))))
@@ -408,9 +423,12 @@
     :else
     (let [[_ f args-head] x
           evaled-lit (assert-lit (bel-eval env f))]
-      (if (= bel-mac (lit-type evaled-lit))
-        (eval-mac env (lit-v evaled-lit) args-head)
-        (eval-lit-f env evaled-lit (eval-pairs env args-head))))))
+      (eval-lit
+       env
+       evaled-lit
+       (if (= bel-mac (lit-type evaled-lit))
+         args-head
+         (eval-pairs env args-head))))))
 
 (defn eval-backquoted-form [env [t [h-t :as h] r :as form]]
   (cond
@@ -513,8 +531,11 @@
         (fn [s] (not= s "===BREAK===")))))
 
 (comment
+  (map bel-parse (readable-source))
   (apply run (readable-source)))
 
 ; next up
-; make macros work with apply
+; hmm...something is wrong with `=`
+; think the way we show `args` is not quite right.
+; Perhaps I should implement a pretty printer? will def make things easier
 ; waiting: -- what should happen if we see (fn ((nil .nil) x) y)

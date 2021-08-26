@@ -1,6 +1,5 @@
 The Bel Language   12 Oct 2019
 
-
 In 1960 John McCarthy described a new type of programming language
 called Lisp. I say "new type" because Lisp represented not just a new
 language but a new way of describing languages. He defined Lisp by

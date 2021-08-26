@@ -141,15 +141,15 @@
   (reduce (fn es (cons 'if es))
           (or args '(t))))
 
-(apply or '(nil nil))
-
-===BREAK===
-
 (def = args
   (if (no (cdr args))  t
       (some atom args) (all [id _ (car args)] (cdr args))
                        (and (apply = (map car args))
                             (apply = (map cdr args)))))
+
+globe
+
+===BREAK===
 
 (def symbol (x) (= (type x) 'symbol))
 
@@ -158,6 +158,7 @@
 (def char   (x) (= (type x) 'char))
 
 (def stream (x) (= (type x) 'stream))
+
 
 (def proper (x)
   (or (no x)
