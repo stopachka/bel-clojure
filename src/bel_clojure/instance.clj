@@ -289,12 +289,13 @@
 
 (declare bel-eval)
 
-(defn find-env-pair [sym-to-find pairs]
+(defn find-env-pair [to-find pairs]
   (let [v (some->> pairs
-                   (pair-find (fn [p] (= sym-to-find (p-car p)))))]
+                   (pair-find
+                    (fn [p] (= bel-t (p-id to-find (p-car p))))))]
     (when (not= v bel-nil) v)))
 
-(defn eval-symbol [{:keys [scope globe]} form]
+(defn eval-variable [{:keys [scope globe]} form]
   (cond
     (#{bel-nil bel-t bel-o bel-apply} form) form
     (= bel-globe form) globe
@@ -302,12 +303,12 @@
     :else
     (let [v (->> [scope globe]
                  (some (partial find-env-pair form)))]
-      (assert v (format "expected value for symbol = %s" form))
+      (assert v (format "expected value for varaible = %s" form))
       (p-cdr v))))
 
 (comment
-  (eval-symbol {:scope bel-nil
-                :globe (make-bel-globe)} [:symbol "id"]))
+  (eval-variable {:scope bel-nil
+                  :globe (make-bel-globe)} [:symbol "id"]))
 
 (defn eval-prim [_env r args-head]
   (let [[_ [_ n]] r
@@ -324,55 +325,81 @@
 
     (apply f niled-args)))
 
-(defn make-env-pair [[sym-t :as sym] v]
-  (assert (= :symbol sym-t)
-          (format "expected left-side of to be a symbol = %s" sym))
+(defn find-vmark [globe]
+  (some-> (find-env-pair [:symbol "vmark"] globe) p-cdr))
+
+(defn bel-variable? [[vmark-t :as vmark] [var-t :as var-head]]
+  (or
+   (= var-t :symbol)
+   (and (= vmark-t :pair)
+        (= var-t :pair)
+        (= (p-id vmark (p-car var-head)) bel-t))))
+
+(defn make-env-pair [vmark sym v]
+  (assert (bel-variable? vmark sym)
+          (format "expected left-side to be a variable= %s" sym))
   (make-pair sym v))
 
 (defn eval-set [{:keys [globe] :as env} r]
-  (letfn [(f [p]
-            (let [[_ sym after-sym] p
-                  _ (assert (not= bel-nil after-sym)
-                            "Set sym needs a value")
-                  [_ v after-v] after-sym
-                  evaled-v (bel-eval env v)
-                  [_ head tail] globe]
-              (p-xar globe (make-env-pair sym evaled-v))
-              (p-xdr globe (make-pair head tail))
-              (when (not= bel-nil after-v)
-                (f after-v))))]
-    (f r)))
+  (let [vmark (find-vmark globe)]
+    (letfn [(f [p]
+              (let [[_ sym after-sym] p
+                    _ (assert (not= bel-nil after-sym)
+                              "Set sym needs a value")
+                    [_ v after-v] after-sym
+                    evaled-v (bel-eval env v)
+                    [_ head tail] globe]
+                (p-xar globe (make-env-pair vmark sym evaled-v))
+                (p-xdr globe (make-pair head tail))
+                (when (not= bel-nil after-v)
+                  (f after-v))))]
+      (f r))))
 
-(defn add-to-scope [scope [sym-t :as sym-head] arg-head]
-  (let [num-nil (->> [sym-head arg-head]
-                     (filter (partial = bel-nil))
-                     count)]
-    (cond
-      (= num-nil 2)
-      scope
+(defn assign-vars [{:keys [globe scope]} var-head arg-head]
+  (let [vmark (find-vmark globe)]
+    (letfn [(f [vmark scope var-head arg-head]
+              (cond
+                (every? (partial = bel-nil) [var-head arg-head])
+                scope
 
-      (= :symbol sym-t)
-      (make-pair
-       (make-env-pair sym-head arg-head)
-       scope)
+                (bel-variable? vmark var-head)
+                (make-pair (make-env-pair
+                            vmark
+                            var-head
+                            arg-head)
+                           scope)
 
-      :else
-      (add-to-scope
-       (make-pair
-        (make-env-pair (p-car sym-head)
-                       (p-car arg-head))
-        scope)
-       (p-cdr sym-head)
-       (p-cdr arg-head)))))
+                :else
+                (let [s' (f vmark
+                            scope
+                            (p-car var-head)
+                            (p-car arg-head))]
+                  (f vmark s' (p-cdr var-head) (p-cdr arg-head)))))]
+      (f vmark scope var-head arg-head))))
 
 (comment
-  (add-to-scope bel-nil (bel-parse "(x y)") (bel-parse "(a b)"))
-  (add-to-scope bel-nil (bel-parse "(x y . z)") (bel-parse "(a b c d)"))
-  (add-to-scope bel-nil (bel-parse "(n . rest)") (bel-parse "(n args)")))
+  (assign-vars {:globe bel-nil :scope bel-nil}
+               (bel-parse "(x y)") (bel-parse "(a b)"))
+  (assign-vars
+   {:globe bel-nil :scope bel-nil}
+   (bel-parse "(x y . z)") (bel-parse "(a b c d)"))
+  (assign-vars
+   {:globe bel-nil :scope bel-nil}
+   (bel-parse "(n . rest)") (bel-parse "(n args)"))
+  (let [vmark (make-pair bel-nil bel-nil)]
+    (assign-vars
+     {:globe (make-pair
+              (make-pair [:symbol "vmark"] vmark)
+              bel-nil)
+      :scope bel-nil}
+     (make-pair vmark bel-nil)
+     (bel-parse "a"))))
 
 (defn eval-clo [env r args-head]
   (let [[_ scope [_ args-sym-head [_ body-head]]] r
-        new-scope (add-to-scope scope args-sym-head args-head)]
+        new-scope (assign-vars (assoc env :scope scope)
+                               args-sym-head
+                               args-head)]
     (bel-eval (assoc env :scope new-scope) body-head)))
 
 (defn eval-mac [env [_ [_ _ [_ _ clo]]] args-head]
@@ -480,16 +507,14 @@
     :scope (bel-parse "((parms . (a)) (body . (inc id a)))")}
    (bel-parse "`(',parms ',(car body))")))
 
-(defn bel-eval [env form]
-  (let [[t] form]
-    (condp = t
-      :char form
-      :symbol
-      (eval-symbol env form)
-      :pair
-      (eval-pair env form)
-      :backquote
-      (eval-backquote env form))))
+(defn bel-eval [{:keys [globe] :as env} form]
+  (let [vmark (find-vmark globe)
+        [t] form]
+    (cond
+      (= t :char) form
+      (bel-variable? vmark form) (eval-variable env form)
+      (= t :pair) (eval-pair env form)
+      (= t :backquote) (eval-backquote env form))))
 
 (defn run [& ss]
   (let [globe (make-bel-globe)]
