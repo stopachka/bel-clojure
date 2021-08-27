@@ -124,10 +124,6 @@
         `(let ,v ,(car args)
            (if ,v ,v (or ,@(cdr args)))))))
 
-(or nil nil 'a)
-
-===BREAK===
-
 (mac and args
   (reduce (fn es (cons 'if es))
           (or args '(t))))
@@ -152,6 +148,10 @@
 
 (def string (x)
   (and (proper x) (all char x)))
+
+(string "abc")
+
+===BREAK===
 
 (def mem (x ys (o f =))
   (some [f _ x] ys))
