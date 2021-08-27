@@ -303,6 +303,8 @@
                     (fn [p] (= bel-t (p-id to-find (p-car p))))))]
     (when (not= v bel-nil) v)))
 
+
+
 (defn eval-variable [{:keys [scope globe]} form done-f]
   (cond
     (#{bel-nil bel-t bel-o bel-apply} form) (done-f form)
@@ -316,9 +318,10 @@
 
 (comment
   (eval-variable {:scope bel-nil
-                  :globe (make-bel-globe)} [:symbol "id"]))
+                  :globe (make-bel-globe)} [:symbol "id"]
+                 (fn [x] (println x))))
 
-(defn eval-prim [_env r args-head]
+(defn eval-prim [_env r args-head done-f]
   (let [[_ [_ n]] r
         f (prim-name->fn n)
         args (pair->clojure-seq args-head)
@@ -330,8 +333,7 @@
         _ (assert (<= (count args) (count niled-args))
                   (format
                    "too many args = %s niled-args = %s niled-args" args niled-args))]
-
-    (apply f niled-args)))
+    (done-f (apply f niled-args))))
 
 (defn find-vmark
   "This needs to run on every eval, which
@@ -484,14 +486,14 @@
 
 (defn lit-v [[_ _lit [_ _t v]]] v)
 
-(defn eval-lit [env lit args-head]
+(defn eval-lit [env lit args-head done-f]
   (condp = (lit-type lit)
     bel-prim
-    (eval-prim env (lit-v lit) args-head)
+    (eval-prim env (lit-v lit) args-head done-f)
     bel-clo
-    (eval-clo env (lit-v lit) args-head)
+    (eval-clo env (lit-v lit) args-head done-f)
     bel-mac
-    (eval-mac env (lit-v lit) args-head)
+    (eval-mac env (lit-v lit) args-head done-f)
     (throw (Exception. "err unsupported fn call"))))
 
 (defn eval-apply [env [_ f apply-head] done-f]
@@ -581,8 +583,7 @@
       (= t :backquote) (eval-backquote env form))))
 
 (defn run [& ss]
-  (let [p (promise)
-        globe (make-bel-globe)]
+  (let [ globe (make-bel-globe)]
     (letfn [(f [ss done-f]
               (bel-eval {:globe globe :scope bel-nil}
                         (bel-parse (first ss))
@@ -590,8 +591,7 @@
                           (if (seq (rest ss))
                             (f (rest ss) done-f)
                             (done-f r)))))]
-      (f ss (fn [r] (deliver p r))))
-    @p))
+      (f ss (fn [r] (println ">>" r))))))
 
 (comment
   (run "\\bel")
