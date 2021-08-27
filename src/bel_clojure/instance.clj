@@ -128,7 +128,9 @@
                        [:symbol "fn"]
                        (make-pair
                          (make-pair [:symbol "_"] bel-nil)
-                         (<-pairs xs))))))
+                         (make-pair
+                           (<-pairs xs)
+                           bel-nil))))))
 
 (def parse-string (-> "bel.ebnf" io/resource insta/parser))
 
@@ -155,7 +157,7 @@
   (bel-parse "()")
   (bel-parse "`(foo ,a ,@b)")
   (bel-parse "=")
-  (bel-parse "[f _ x]"))
+  (bel-parse "[id _ (car args)]"))
 
 ;; Primitives
 ;; ----------
@@ -251,9 +253,17 @@
 
 (comment (p-coin))
 
+; Note, this is not necessary for
+; PG, but helps for debugging
+(def p-atom (atom nil))
+(-> p-atom)
+(defn p-print [x]
+  (reset! p-atom x)
+  (println x))
+
 ;; Globe
 ;; -------------
-
+(-> p-atom)
 (def prim-name->fn
   {"id" #'p-id
    "car" #'p-car
@@ -264,7 +274,8 @@
    "xdr" #'p-xdr
    "sym" #'p-sym
    "nom" #'p-nom
-   "coin" #'p-coin})
+   "coin" #'p-coin
+   "p-print" #'p-print })
 
 (defn make-bel-globe []
   (->> prim-name->fn
@@ -357,7 +368,9 @@
 
 (comment
   (add-to-scope bel-nil (bel-parse "(x y)") (bel-parse "(a b)"))
-  (add-to-scope bel-nil (bel-parse "(x y . z)") (bel-parse "(a b c d)")))
+  (add-to-scope bel-nil (bel-parse "(x y . z)") (bel-parse "(a b c d)"))
+  (add-to-scope bel-nil (bel-parse "(n . rest)") (bel-parse "(n args)"))
+  )
 
 (defn eval-clo [env r args-head]
   (let [[_ scope [_ args-sym-head [_ body-head]]] r
@@ -535,7 +548,5 @@
   (apply run (readable-source)))
 
 ; next up
-; hmm...something is wrong with `=`
-; think the way we show `args` is not quite right.
-; Perhaps I should implement a pretty printer? will def make things easier
+; implement `o`
 ; waiting: -- what should happen if we see (fn ((nil .nil) x) y)

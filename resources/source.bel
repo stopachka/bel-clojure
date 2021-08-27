@@ -147,8 +147,6 @@
                        (and (apply = (map car args))
                             (apply = (map cdr args)))))
 
-===BREAK===
-
 (def symbol (x) (= (type x) 'symbol))
 
 (def pair   (x) (= (type x) 'pair))
@@ -166,6 +164,8 @@
 
 (def mem (x ys (o f =))
   (some [f _ x] ys))
+
+===BREAK===
 
 (def in (x . ys)
   (mem x ys))
