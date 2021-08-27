@@ -24,6 +24,7 @@
 (def bel-globe [:symbol "globe"])
 (def bel-scope [:symbol "scope"])
 (def bel-if [:symbol "if"])
+(def bel-vmark-sym [:symbol "vmark"])
 
 ;; Pair
 ;; ----
@@ -326,7 +327,7 @@
     (apply f niled-args)))
 
 (defn find-vmark [globe]
-  (some-> (find-env-pair [:symbol "vmark"] globe) p-cdr))
+  (some-> (find-env-pair bel-vmark-sym globe) p-cdr))
 
 (defn bel-variable? [[vmark-t :as vmark] [var-t :as var-head]]
   (or
@@ -389,7 +390,7 @@
   (let [vmark (make-pair bel-nil bel-nil)]
     (assign-vars
      {:globe (make-pair
-              (make-pair [:symbol "vmark"] vmark)
+              (make-pair bel-vmark-sym vmark)
               bel-nil)
       :scope bel-nil}
      (make-pair vmark bel-nil)
