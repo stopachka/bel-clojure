@@ -120,17 +120,16 @@
                   (fn [[_ exp]]
                     (make-quoted-pair exp))))
 
-
 (def abbrev-fn->pair
   (form-transform :abbrev_fn
                   (fn [[_ & xs]]
                     (make-pair
-                       [:symbol "fn"]
-                       (make-pair
-                         (make-pair [:symbol "_"] bel-nil)
-                         (make-pair
-                           (<-pairs xs)
-                           bel-nil))))))
+                     [:symbol "fn"]
+                     (make-pair
+                      (make-pair [:symbol "_"] bel-nil)
+                      (make-pair
+                       (<-pairs xs)
+                       bel-nil))))))
 
 (def parse-string (-> "bel.ebnf" io/resource insta/parser))
 
@@ -253,17 +252,17 @@
 
 (comment (p-coin))
 
-; Note, this is not necessary for
-; PG, but helps for debugging
-(def p-atom (atom nil))
-(-> p-atom)
-(defn p-print [x]
-  (reset! p-atom x)
+(def _d (atom nil))
+(defn p-debug
+  "Note, this is not necessary for
+   Bel, but helps for debugging"
+  [x]
+  (reset! _d x)
   (println x))
 
 ;; Globe
 ;; -------------
-(-> p-atom)
+
 (def prim-name->fn
   {"id" #'p-id
    "car" #'p-car
@@ -275,7 +274,7 @@
    "sym" #'p-sym
    "nom" #'p-nom
    "coin" #'p-coin
-   "p-print" #'p-print })
+   "p-debug" #'p-debug})
 
 (defn make-bel-globe []
   (->> prim-name->fn
@@ -369,8 +368,7 @@
 (comment
   (add-to-scope bel-nil (bel-parse "(x y)") (bel-parse "(a b)"))
   (add-to-scope bel-nil (bel-parse "(x y . z)") (bel-parse "(a b c d)"))
-  (add-to-scope bel-nil (bel-parse "(n . rest)") (bel-parse "(n args)"))
-  )
+  (add-to-scope bel-nil (bel-parse "(n . rest)") (bel-parse "(n args)")))
 
 (defn eval-clo [env r args-head]
   (let [[_ scope [_ args-sym-head [_ body-head]]] r
