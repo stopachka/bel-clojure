@@ -151,8 +151,6 @@
 
 (string "abc")
 
-===BREAK===
-
 (def mem (x ys (o f =))
   (some [f _ x] ys))
 
@@ -188,6 +186,12 @@
 
 (def find (f xs)
   (aif (some f xs) (car it)))
+
+(some (fn (_)
+        (p-debug _)
+        (= (car _) \a)) '("pear" "apple" "grape"))
+
+===BREAK===
 
 (def begins (xs pat (o f =))
   (if (no pat)               t

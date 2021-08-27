@@ -304,7 +304,7 @@
     :else
     (let [v (->> [scope globe]
                  (some (partial find-env-pair form)))]
-      (assert v (format "expected value for varaible = %s" form))
+      (assert v (format "expected value for variable = %s" form))
       (p-cdr v))))
 
 (comment
@@ -326,7 +326,11 @@
 
     (apply f niled-args)))
 
-(defn find-vmark [globe]
+(defn find-vmark
+  "This needs to run on every eval, which
+  certainly slows things down. We may want to
+  consider an optimization soonish"
+  [globe]
   (some-> (find-env-pair bel-vmark-sym globe) p-cdr))
 
 (defn bel-variable? [[vmark-t :as vmark] [var-t :as var-head]]
@@ -356,9 +360,19 @@
                   (f after-v))))]
       (f r))))
 
-(defn assign-vars [{:keys [globe scope]} var-head arg-head]
+(defn bel-optional? [[_ h]]
+  (= bel-o h))
+(defn bel-optional-var [[_ _h [_ variable]]] variable)
+(defn bel-optional-arg [[_ _h [_ _variable r]]] (p-car r))
+
+(comment
+  (bel-optional? (bel-parse "(o f =)"))
+  (bel-optional-var (bel-parse "(o f =)"))
+  (bel-optional-arg (bel-parse "(o f =)")))
+
+(defn assign-vars [{:keys [globe scope] :as env} var-head arg-head]
   (let [vmark (find-vmark globe)]
-    (letfn [(f [vmark scope var-head arg-head]
+    (letfn [(f [scope var-head arg-head]
               (cond
                 (every? (partial = bel-nil) [var-head arg-head])
                 scope
@@ -370,13 +384,19 @@
                             arg-head)
                            scope)
 
+                (bel-optional? var-head)
+                (f scope
+                   (bel-optional-var var-head)
+                   (if (= bel-nil arg-head)
+                     (bel-eval env (bel-optional-arg var-head))
+                     arg-head))
+
                 :else
-                (let [s' (f vmark
-                            scope
+                (let [s' (f scope
                             (p-car var-head)
                             (p-car arg-head))]
-                  (f vmark s' (p-cdr var-head) (p-cdr arg-head)))))]
-      (f vmark scope var-head arg-head))))
+                  (f s' (p-cdr var-head) (p-cdr arg-head)))))]
+      (f scope var-head arg-head))))
 
 (comment
   (assign-vars {:globe bel-nil :scope bel-nil}
@@ -394,7 +414,11 @@
               bel-nil)
       :scope bel-nil}
      (make-pair vmark bel-nil)
-     (bel-parse "a"))))
+     (bel-parse "a")))
+  (assign-vars {:globe bel-nil :scope bel-nil}
+               (bel-parse "(a b (o f =))") (bel-parse "(a b c)"))
+  (assign-vars {:globe (make-bel-globe) :scope bel-nil}
+               (bel-parse "(a b (o f id))") (bel-parse "(a b)")))
 
 (defn eval-clo [env r args-head]
   (let [[_ scope [_ args-sym-head [_ body-head]]] r
@@ -572,5 +596,5 @@
   (apply run (readable-source)))
 
 ; next up
-; implement `o`
+; why doesn't `find` work?
 ; waiting: -- what should happen if we see (fn ((nil .nil) x) y)
