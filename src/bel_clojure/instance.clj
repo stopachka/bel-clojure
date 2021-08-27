@@ -69,6 +69,16 @@
      (p-car a)
      (pair-append (p-cdr a) b))))
 
+(defn pair-proper? [[p-t :as p]]
+  (or (= bel-nil p)
+      (and (= p-t :pair)
+           (pair-proper? (p-cdr p)))))
+
+(defn pair-every? [f p]
+  (if (= bel-nil p) true
+    (and (f (p-car p))
+         (pair-every? f (p-cdr p)))))
+
 ;; Reader
 ;; ------
 
@@ -108,11 +118,7 @@
   (form-transform
    :string
    (fn [[_t & children]]
-     (make-quoted-pair
-      (<-pairs
-       (map (fn [[_ v]]
-              [:char v])
-            children))))))
+     (<-pairs (map (fn [[_ v]] [:char v]) children)))))
 
 (def unwrap-name (form-transform :name second))
 
@@ -157,6 +163,7 @@
   (bel-parse "()")
   (bel-parse "`(foo ,a ,@b)")
   (bel-parse "=")
+  (bel-parse ">=")
   (bel-parse "[id _ (car args)]"))
 
 ;; Primitives
@@ -532,11 +539,16 @@
     :scope (bel-parse "((parms . (a)) (body . (inc id a)))")}
    (bel-parse "`(',parms ',(car body))")))
 
+(defn bel-string? [a]
+  (and (pair-proper? a)
+       (pair-every? (fn [[t]] (= t :char)) a)))
+
 (defn bel-eval [{:keys [globe] :as env} form]
   (let [vmark (find-vmark globe)
         [t] form]
     (cond
       (= t :char) form
+      (bel-string? form) form
       (bel-variable? vmark form) (eval-variable env form)
       (= t :pair) (eval-pair env form)
       (= t :backquote) (eval-backquote env form))))
@@ -596,5 +608,5 @@
   (apply run (readable-source)))
 
 ; next up
-; why doesn't `find` work?
+; start by making dyn. Then move on to ccc, then err
 ; waiting: -- what should happen if we see (fn ((nil .nil) x) y)
