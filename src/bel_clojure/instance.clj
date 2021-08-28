@@ -76,8 +76,8 @@
 
 (defn pair-every? [f p]
   (if (= bel-nil p) true
-    (and (f (p-car p))
-         (pair-every? f (p-cdr p)))))
+      (and (f (p-car p))
+           (pair-every? f (p-cdr p)))))
 
 ;; Reader
 ;; ------
@@ -303,22 +303,23 @@
                     (fn [p] (= bel-t (p-id to-find (p-car p))))))]
     (when (not= v bel-nil) v)))
 
-(defn eval-variable [{:keys [scope globe]} form]
+(defn eval-variable [{:keys [scope globe]} form done-f]
   (cond
-    (#{bel-nil bel-t bel-o bel-apply} form) form
-    (= bel-globe form) globe
-    (= bel-scope form) scope
+    (#{bel-nil bel-t bel-o bel-apply} form) (done-f form)
+    (= bel-globe form) (done-f globe)
+    (= bel-scope form) (done-f scope)
     :else
     (let [v (->> [scope globe]
                  (some (partial find-env-pair form)))]
       (assert v (format "expected value for variable = %s" form))
-      (p-cdr v))))
+      (done-f (p-cdr v)))))
 
 (comment
   (eval-variable {:scope bel-nil
-                  :globe (make-bel-globe)} [:symbol "id"]))
+                  :globe (make-bel-globe)} [:symbol "id"]
+                 (fn [x] (println x))))
 
-(defn eval-prim [_env r args-head]
+(defn eval-prim [_env r args-head done-f]
   (let [[_ [_ n]] r
         f (prim-name->fn n)
         args (pair->clojure-seq args-head)
@@ -330,8 +331,7 @@
         _ (assert (<= (count args) (count niled-args))
                   (format
                    "too many args = %s niled-args = %s niled-args" args niled-args))]
-
-    (apply f niled-args)))
+    (done-f (apply f niled-args))))
 
 (defn find-vmark
   "This needs to run on every eval, which
@@ -352,19 +352,22 @@
           (format "expected left-side to be a variable= %s" sym))
   (make-pair sym v))
 
-(defn eval-set [{:keys [globe] :as env} r]
+(defn eval-set [{:keys [globe] :as env} r done-f]
   (let [vmark (find-vmark globe)]
     (letfn [(f [p]
               (let [[_ sym after-sym] p
                     _ (assert (not= bel-nil after-sym)
                               "Set sym needs a value")
-                    [_ v after-v] after-sym
-                    evaled-v (bel-eval env v)
-                    [_ head tail] globe]
-                (p-xar globe (make-env-pair vmark sym evaled-v))
-                (p-xdr globe (make-pair head tail))
-                (when (not= bel-nil after-v)
-                  (f after-v))))]
+                    [_ v after-v] after-sym]
+                (bel-eval
+                 env v
+                 (fn [evaled-v]
+                   (let [[_ head tail] globe]
+                     (p-xar globe (make-env-pair vmark sym evaled-v))
+                     (p-xdr globe (make-pair head tail))
+                     (if (= bel-nil after-v)
+                       (done-f bel-nil)
+                       (f after-v)))))))]
       (f r))))
 
 (defn bel-optional? [[_ h]]
@@ -377,43 +380,51 @@
   (bel-optional-var (bel-parse "(o f =)"))
   (bel-optional-arg (bel-parse "(o f =)")))
 
-(defn assign-vars [{:keys [globe scope] :as env} var-head arg-head]
+(defn assign-vars [{:keys [globe scope] :as env} var-head arg-head done-f]
   (let [vmark (find-vmark globe)]
-    (letfn [(f [scope var-head arg-head]
+    (letfn [(f [scope var-head arg-head done-f]
               (cond
                 (every? (partial = bel-nil) [var-head arg-head])
-                scope
+                (done-f scope)
 
                 (bel-variable? vmark var-head)
-                (make-pair (make-env-pair
-                            vmark
-                            var-head
-                            arg-head)
-                           scope)
+                (done-f (make-pair (make-env-pair
+                                    vmark
+                                    var-head
+                                    arg-head)
+                                   scope))
 
                 (bel-optional? var-head)
-                (f scope
-                   (bel-optional-var var-head)
-                   (if (= bel-nil arg-head)
-                     (bel-eval env (bel-optional-arg var-head))
-                     arg-head))
-
+                (if (not= bel-nil arg-head)
+                  (f scope (bel-optional-var var-head) arg-head done-f)
+                  (bel-eval
+                   env
+                   (bel-optional-arg var-head)
+                   (fn [evaled-arg]
+                     (f scope (bel-optional-var var-head) evaled-arg done-f))))
                 :else
-                (let [s' (f scope
-                            (p-car var-head)
-                            (p-car arg-head))]
-                  (f s' (p-cdr var-head) (p-cdr arg-head)))))]
-      (f scope var-head arg-head))))
+                (f scope
+                   (p-car var-head)
+                   (p-car arg-head)
+                   (fn [s']
+                     (f s'
+                        (p-cdr var-head)
+                        (p-cdr arg-head)
+                        done-f)))))]
+      (f scope var-head arg-head done-f))))
 
 (comment
   (assign-vars {:globe bel-nil :scope bel-nil}
-               (bel-parse "(x y)") (bel-parse "(a b)"))
+               (bel-parse "(x y)") (bel-parse "(a b)")
+               (fn [x] (println x)))
   (assign-vars
    {:globe bel-nil :scope bel-nil}
-   (bel-parse "(x y . z)") (bel-parse "(a b c d)"))
+   (bel-parse "(x y . z)") (bel-parse "(a b c d)")
+   (fn [x] (println x)))
   (assign-vars
    {:globe bel-nil :scope bel-nil}
-   (bel-parse "(n . rest)") (bel-parse "(n args)"))
+   (bel-parse "(n . rest)") (bel-parse "(n args)")
+   (fn [x] (println x)))
   (let [vmark (make-pair bel-nil bel-nil)]
     (assign-vars
      {:globe (make-pair
@@ -421,34 +432,62 @@
               bel-nil)
       :scope bel-nil}
      (make-pair vmark bel-nil)
-     (bel-parse "a")))
+     (bel-parse "a")
+     (fn [x] (println x))))
   (assign-vars {:globe bel-nil :scope bel-nil}
-               (bel-parse "(a b (o f =))") (bel-parse "(a b c)"))
+               (bel-parse "(a b (o f =))")
+               (bel-parse "(a b c)")
+               (fn [x] (println x)))
   (assign-vars {:globe (make-bel-globe) :scope bel-nil}
-               (bel-parse "(a b (o f id))") (bel-parse "(a b)")))
+               (bel-parse "(a b (o f id))") (bel-parse "(a b)")
+               (fn [x] (println x))))
 
-(defn eval-clo [env r args-head]
-  (let [[_ scope [_ args-sym-head [_ body-head]]] r
-        new-scope (assign-vars (assoc env :scope scope)
-                               args-sym-head
-                               args-head)]
-    (bel-eval (assoc env :scope new-scope) body-head)))
+(defn eval-clo [env r args-head done-f]
+  (let [[_ scope [_ args-sym-head [_ body-head]]] r]
+    (assign-vars
+     (assoc env :scope scope)
+     args-sym-head
+     args-head
+     (fn [new-scope]
+       (bel-eval
+        (assoc env :scope new-scope)
+        body-head
+        done-f)))))
 
-(defn eval-mac [env [_ [_ _ [_ _ clo]]] args-head]
-  (let [code (eval-clo env clo args-head)]
-    (bel-eval env code)))
+(defn eval-mac [env [_ [_ _ [_ _ clo]]] args-head done-f]
+  (eval-clo
+   env clo args-head
+   (fn [code]
+     (bel-eval env code done-f))))
 
-(defn eval-if [env [_ test-form [_ consequent-form r]]]
-  (if (not= (bel-eval env test-form)
-            bel-nil)
-    (bel-eval env consequent-form)
-    (cond
-      (= bel-nil r) r
-      (= bel-nil (p-cdr r)) (bel-eval env (p-car r))
-      :else (eval-if env r))))
+(defn eval-if [env [_ test-form [_ consequent-form r]] done-f]
+  (bel-eval
+   env test-form
+   (fn [evaled-test-form]
+     (if (not= evaled-test-form
+               bel-nil)
+       (bel-eval env consequent-form done-f)
+       (cond
+         (= bel-nil r) (done-f r)
+         (= bel-nil (p-cdr r)) (bel-eval env (p-car r) done-f)
+         :else (eval-if env r done-f))))))
 
-(defn eval-pairs [env head]
-  (pair-map (partial bel-eval env) head))
+(defn eval-pairs [env head done-f]
+  (letfn [(f [res p]
+            (if (= p bel-nil)
+              (done-f (-> res <-pairs))
+              (bel-eval
+               env
+               (p-car p)
+               (fn [evaled-h]
+                 (f (conj res evaled-h)
+                    (p-cdr p))))))]
+    (f [] head)))
+
+(comment
+  (eval-pairs {:globe (make-bel-globe)}
+              (bel-parse "(apply o)")
+              (fn [x] (println x))))
 
 (defn apply-head->args-head [x]
   (let [xs (pair->clojure-seq x)
@@ -467,100 +506,149 @@
 
 (defn lit-v [[_ _lit [_ _t v]]] v)
 
-(defn eval-lit [env lit args-head]
+(defn eval-lit [env lit args-head done-f]
   (condp = (lit-type lit)
     bel-prim
-    (eval-prim env (lit-v lit) args-head)
+    (eval-prim env (lit-v lit) args-head done-f)
     bel-clo
-    (eval-clo env (lit-v lit) args-head)
+    (eval-clo env (lit-v lit) args-head done-f)
     bel-mac
-    (eval-mac env (lit-v lit) args-head)
+    (eval-mac env (lit-v lit) args-head done-f)
     (throw (Exception. "err unsupported fn call"))))
 
-(defn eval-apply [env [_ f apply-head]]
-  (eval-lit
+(defn eval-apply [env [_ f apply-head] done-f]
+  (bel-eval
    env
-   (assert-lit (bel-eval env f))
-   (apply-head->args-head (eval-pairs env apply-head))))
+   f
+   (fn [evaled-lit]
+     (assert-lit evaled-lit)
+     (eval-pairs
+      env
+      apply-head
+      (fn [evaled-head]
+        (eval-lit
+         env
+         evaled-lit
+         (apply-head->args-head evaled-head)
+         done-f))))))
 
-(defn eval-pair [env [_ l r :as x]]
+(defn eval-pair [env [_ l r :as x] done-f]
   (cond
-    (= bel-quote l) r
-    (= bel-lit l) x
-    (= bel-set l) (eval-set env r)
-    (= bel-if l) (eval-if env r)
-    (= bel-apply l) (eval-apply env r)
+    (= bel-quote l) (done-f r)
+    (= bel-lit l) (done-f x)
+    (= bel-set l) (eval-set env r done-f)
+    (= bel-if l) (eval-if env r done-f)
+    (= bel-apply l) (eval-apply env r done-f)
     :else
-    (let [[_ f args-head] x
-          evaled-lit (assert-lit (bel-eval env f))]
-      (eval-lit
-       env
-       evaled-lit
-       (if (= bel-mac (lit-type evaled-lit))
-         args-head
-         (eval-pairs env args-head))))))
+    (let [[_ f args-head] x]
+      (bel-eval
+       env f
+       (fn [evaled-lit]
+         (assert-lit evaled-lit)
+         (if (= bel-mac (lit-type evaled-lit))
+           (eval-lit env evaled-lit args-head done-f)
+           (eval-pairs
+            env args-head
+            (fn [evaled-args-head]
+              (eval-lit env evaled-lit evaled-args-head done-f)))))))))
 
-(defn eval-backquoted-form [env [t [h-t :as h] r :as form]]
+(defn eval-backquoted-form [env [t [h-t :as h] r :as form] done-f]
   (cond
-    (= t :comma) (bel-eval env (second form))
+    (= t :comma) (bel-eval env (second form) done-f)
 
-    (not= t :pair) form
+    (not= t :pair) (done-f form)
 
-    (= :quote h-t) (make-pair
-                    (make-quoted-pair (eval-backquoted-form env (second h)))
-                    (eval-backquoted-form env r))
+    (= :quote h-t)
+    (eval-backquoted-form
+     env (second h)
+     (fn [evaled-second-h]
+       (eval-backquoted-form
+        env r
+        (fn [evaled-r]
+          (done-f
+           (make-pair
+            (make-quoted-pair evaled-second-h)
+            evaled-r))))))
 
-    (= h-t :comma) (make-pair
-                    (bel-eval env (second h))
-                    (eval-backquoted-form env r))
+    (= h-t :comma)
+    (bel-eval
+     env (second h)
+     (fn [evaled-second-h]
+       (eval-backquoted-form
+        env r
+        (fn [evaled-r]
+          (done-f
+           (make-pair evaled-second-h evaled-r))))))
 
-    (= h-t :splice) (pair-append
-                     (bel-eval env (second h))
-                     (eval-backquoted-form env r))
+    (= h-t :splice)
+    (bel-eval
+     env (second h)
+     (fn [evaled-second-h]
+       (eval-backquoted-form
+        env r
+        (fn [evaled-r]
+          (done-f
+           (pair-append evaled-second-h evaled-r))))))
 
-    (= h-t :pair) (make-pair
-                   (eval-backquoted-form env h)
-                   (eval-backquoted-form env r))
+    (= h-t :pair)
+    (eval-backquoted-form
+     env h
+     (fn [evaled-h]
+       (eval-backquoted-form
+        env r
+        (fn [evaled-r]
+          (done-f (make-pair evaled-h evaled-r))))))
 
-    :else (make-pair h (eval-backquoted-form env r))))
+    :else
+    (eval-backquoted-form env r
+                          (fn [evaled-r]
+                            (done-f (make-pair h evaled-r))))))
 
-(defn eval-backquote [env [_ r]]
-  (eval-backquoted-form env r))
+(defn eval-backquote [env [_ r] done-f]
+  (eval-backquoted-form env r done-f))
 
 (comment
   (eval-backquote
    {:scope (bel-parse "((b . foo) (d . bar))")}
-   (bel-parse "`(a ,b (c ,d))"))
+   (bel-parse "`(a ,b (c ,d))")
+   (fn [x] (println x)))
   (eval-backquote
    {:scope (bel-parse "((b . (b c)))")}
-   (bel-parse "`(a (b c ,@b) d e)"))
+   (bel-parse "`(a (b c ,@b) d e)")
+   (fn [x] (println x)))
   (eval-backquote
    {:globe (make-bel-globe)
     :scope (bel-parse "((parms . (a)) (body . (inc id a)))")}
-   (bel-parse "`(',parms ',(car body))")))
+   (bel-parse "`(',parms ',(car body))")
+   (fn [x] (println x))))
 
 (defn bel-string? [a]
   (and (pair-proper? a)
        (pair-every? (fn [[t]] (= t :char)) a)))
 
-(defn bel-eval [{:keys [globe] :as env} form]
+(defn bel-eval [{:keys [globe] :as env} form done-f]
   (let [vmark (find-vmark globe)
         [t] form]
     (cond
-      (= t :char) form
-      (bel-string? form) form
-      (bel-variable? vmark form) (eval-variable env form)
-      (= t :pair) (eval-pair env form)
-      (= t :backquote) (eval-backquote env form))))
+      (= t :char) (done-f form)
+      (bel-string? form) (done-f form)
+      (bel-variable? vmark form) (eval-variable env form done-f)
+      (= t :pair) (eval-pair env form done-f)
+      (= t :backquote) (eval-backquote env form done-f))))
 
 (defn run [& ss]
-  (let [globe (make-bel-globe)]
+  (let [env {:globe (make-bel-globe) :scope bel-nil}]
     (->> ss
-         (map (fn [s] (bel-eval {:globe globe :scope bel-nil} (bel-parse s))))
-         doall
-         last)))
+         (map (fn [s]
+                (println s)
+                (bel-eval env (bel-parse s)
+                          (fn [x]
+                            (when (identical? s (last ss))
+                              (println x))))))
+         doall)))
 
 (comment
+  (run "\\bel")
   (run "nil")
   (run "'foo")
   (run "\"foo\"")
@@ -608,5 +696,6 @@
   (time (apply run (readable-source))))
 
 ; next up
+
 ; start by making dyn. Then move on to ccc, then err
 ; waiting: -- what should happen if we see (fn ((nil .nil) x) y)
