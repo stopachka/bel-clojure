@@ -50,10 +50,11 @@
        :else [r]))))
 
 (defn pair-find [f p]
-  (cond
-    (= bel-nil p) p
-    (f (p-car p)) (p-car p)
-    :else (pair-find f (p-cdr p))))
+  (loop [p p]
+    (cond
+      (= bel-nil p) p
+      (f (p-car p)) (p-car p)
+      :else (recur (p-cdr p)))))
 
 (defn pair-map [f p]
   (if (= bel-nil p) bel-nil
@@ -497,6 +498,7 @@
   (letfn [(f [res p]
             (if (= p bel-nil)
               (done-f (-> res <-pairs))
+
               (bel-eval
                env
                (p-car p)
