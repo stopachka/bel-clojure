@@ -15,6 +15,7 @@
 (def bel-t [:symbol "t"])
 (def bel-dot [:dot "."])
 (def bel-lit [:symbol "lit"])
+(def bel-cont [:symbol "cont"])
 (def bel-prim [:symbol "prim"])
 (def bel-o [:symbol "o"])
 (def bel-apply [:symbol "apply"])
@@ -268,10 +269,19 @@
   (reset! _d x)
   (println x))
 
+(declare bel-eval)
+
+(defn p-ccc [{:keys [env done-f]} f-form]
+  (let [cont (<-pairs [bel-lit bel-cont done-f])]
+    (bel-eval
+     env
+     (make-pair f-form (make-pair cont bel-nil))
+     done-f)))
+
 ;; Globe
 ;; -------------
 
-(def prim-name->fn
+(def sync-prim-name->fn
   {"id" #'p-id
    "car" #'p-car
    "cdr" #'p-cdr
@@ -284,8 +294,10 @@
    "coin" #'p-coin
    "p-debug" #'p-debug})
 
+(def async-prim-name->fn {"ccc" #'p-ccc})
+
 (defn make-bel-globe []
-  (->> prim-name->fn
+  (->> (merge sync-prim-name->fn async-prim-name->fn)
        (map (fn [[k]]
               (make-pair
                [:symbol k]
@@ -319,19 +331,28 @@
                   :globe (make-bel-globe)} [:symbol "id"]
                  (fn [x] (println x))))
 
-(defn eval-prim [_env r args-head done-f]
+(defn fill-nil-args [f args]
+  (let [res (->> f
+                 meta
+                 :arglists
+                 first
+                 (map-indexed (fn [i _] (nth args i bel-nil))))]
+    (assert (<= (count args) (count res))
+            (format
+             "too many args = %s niled-args = %s niled-args" args res))
+    res))
+
+(defn eval-prim [env r args-head done-f]
   (let [[_ [_ n]] r
-        f (prim-name->fn n)
         args (pair->clojure-seq args-head)
-        niled-args (->> f
-                        meta
-                        :arglists
-                        first
-                        (map-indexed (fn [i _] (nth args i bel-nil))))
-        _ (assert (<= (count args) (count niled-args))
-                  (format
-                   "too many args = %s niled-args = %s niled-args" args niled-args))]
-    (done-f (apply f niled-args))))
+        sync-f (sync-prim-name->fn n)
+        async-f (async-prim-name->fn n)]
+    (cond
+      sync-f (done-f (apply sync-f (fill-nil-args sync-f args)))
+      async-f (apply async-f
+                     (fill-nil-args async-f
+                                    (concat [{:env env :done-f done-f}]
+                                            args))))))
 
 (defn find-vmark
   "This needs to run on every eval, which
@@ -506,6 +527,9 @@
 
 (defn lit-v [[_ _lit [_ _t v]]] v)
 
+(defn eval-cont [_env [_ f] args-head _done-f]
+  (f args-head))
+
 (defn eval-lit [env lit args-head done-f]
   (condp = (lit-type lit)
     bel-prim
@@ -514,6 +538,8 @@
     (eval-clo env (lit-v lit) args-head done-f)
     bel-mac
     (eval-mac env (lit-v lit) args-head done-f)
+    bel-cont
+    (eval-cont env (lit-v lit) args-head done-f)
     (throw (Exception. "err unsupported fn call"))))
 
 (defn eval-apply [env [_ f apply-head] done-f]
@@ -642,8 +668,7 @@
          (map (fn [s]
                 (bel-eval env (bel-parse s)
                           (fn [x]
-                            (when (identical? s (last ss))
-                              (println x))))))
+                            (println x)))))
          doall))
   nil)
 
@@ -696,6 +721,5 @@
   (time (apply run (readable-source))))
 
 ; next up
-
-; start by making dyn. Then move on to ccc, then err
-; waiting: -- what should happen if we see (fn ((nil .nil) x) y)
+; def screwing something up with ccc -- keep thinking
+; waiting: -- what should happen if we see (fn ((nil . nil) x) y)

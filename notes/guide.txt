@@ -1917,7 +1917,8 @@ Here's some simple code that makes a list:
 Now let's try replacing the 'b with an expression that saves the
 current continuation before returning b:
 
-> (list 'a (ccc (fn (c)
+> 
+(list 'a (ccc (fn (c)
                   (set cont c)
                   'b)))
 (a b)
