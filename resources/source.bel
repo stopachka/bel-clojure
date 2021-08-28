@@ -149,8 +149,6 @@
 (def string (x)
   (and (proper x) (all char x)))
 
-(string "abc")
-
 (def mem (x ys (o f =))
   (some [f _ x] ys))
 

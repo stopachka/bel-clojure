@@ -640,12 +640,12 @@
   (let [env {:globe (make-bel-globe) :scope bel-nil}]
     (->> ss
          (map (fn [s]
-                (println s)
                 (bel-eval env (bel-parse s)
                           (fn [x]
                             (when (identical? s (last ss))
                               (println x))))))
-         doall)))
+         doall))
+  nil)
 
 (comment
   (run "\\bel")
