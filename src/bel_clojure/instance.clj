@@ -528,7 +528,7 @@
 (defn lit-v [[_ _lit [_ _t v]]] v)
 
 (defn eval-cont [_env [_ f] args-head _done-f]
-  (f args-head))
+  (f (p-car args-head)))
 
 (defn eval-lit [env lit args-head done-f]
   (condp = (lit-type lit)
@@ -663,14 +663,15 @@
       (= t :backquote) (eval-backquote env form done-f))))
 
 (defn run [& ss]
-  (let [env {:globe (make-bel-globe) :scope bel-nil}]
+  (let [a (atom [])
+        env {:globe (make-bel-globe) :scope bel-nil}]
     (->> ss
          (map (fn [s]
                 (bel-eval env (bel-parse s)
                           (fn [x]
-                            (println x)))))
-         doall))
-  nil)
+                            (swap! a conj x)))))
+         doall)
+    (take-last 2 @a)))
 
 (comment
   (run "\\bel")

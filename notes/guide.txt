@@ -1945,7 +1945,6 @@ continuation we can escape from the middle of it.
            (do (abort 'a)
                (car 'b)))))
 a
-
 Here we bind abort to the continuation before we start evaluating the
 do expression. The second expression within the do
 

@@ -250,12 +250,6 @@
              (let ,var (cdr ,w) ,fail)
              (let ,var ,w ,ok))))))
 
-(list 'a (ccc (fn (c)
-                  (set cont c)
-                  'b)))
-
-(cont 'z)
-
 ===BREAK===
 
 (mac onerr (e1 e2)
