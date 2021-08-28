@@ -605,7 +605,7 @@
 
 (comment
   (map bel-parse (readable-source))
-  (apply run (readable-source)))
+  (time (apply run (readable-source))))
 
 ; next up
 ; start by making dyn. Then move on to ccc, then err
