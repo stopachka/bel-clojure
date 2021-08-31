@@ -5,7 +5,8 @@
    [clojure.string :as cstring]
    [clojure.walk :as walk])
   (:import
-   (java.util ArrayList)))
+   (java.util ArrayList)
+   (clojure.lang ExceptionInfo)))
 
 ;; Constants
 ;; ---------
@@ -250,17 +251,21 @@
 (comment
   (p-sym (bel-parse "\"foo\"")))
 
-(defn p-nom [[t v]]
-  (assert (= t :symbol) "expected symbol")
+(defn clojure-str->bel-str [v]
   (->> v
        (map (fn [c] [:char (str c)]))
        <-pairs))
+(defn p-nom [[t v]]
+  (assert (= t :symbol) "expected symbol")
+  (clojure-str->bel-str v))
 
 (comment
   (p-nom (bel-parse "foo")))
 
-(defn p-err [msg]
-  (throw (Exception. (format "Bel error = %s" (bel-string->str msg)))))
+(defn p-err [msg & more]
+  (throw (ex-info
+          (format "Bel error = %s" (bel-string->str msg))
+          {:more more})))
 
 ;; todo: primitives for streams, sys
 
@@ -277,7 +282,7 @@
   (reset! _d x)
   (println x))
 
-(declare bel-eval)
+(declare bel-eval*)
 (declare eval-pairs)
 
 (defn p-ccc [{:keys [env done-f]} args-head]
@@ -285,7 +290,7 @@
    env args-head
    (fn [evaled-args-head]
      (let [cont (<-pairs [bel-lit bel-cont done-f])]
-       (bel-eval
+       (bel-eval*
         env
         (make-pair (p-car evaled-args-head)
                    (make-pair cont bel-nil))
@@ -313,14 +318,14 @@
   (let [{:keys [globe dyn]} env
         [_ v [_ x [_ y]]] args-head
         vmark (find-vmark globe)]
-    (bel-eval
+    (bel-eval*
      env
      x
      (fn [evaled-x]
        (let [[_ head tail] dyn]
          (p-xar dyn (make-env-pair vmark v evaled-x))
          (p-xdr dyn (make-pair head tail))
-         (bel-eval
+         (bel-eval*
           env
           y
           (fn [res]
@@ -358,8 +363,6 @@
 
 ;; Evaluator
 ;; ---------
-
-(declare bel-eval)
 
 (defn find-env-pair [to-find pairs]
   (let [v (some->> pairs
@@ -449,7 +452,7 @@
                     _ (assert (not= bel-nil after-sym)
                               "Set sym needs a value")
                     [_ v after-v] after-sym]
-                (bel-eval
+                (bel-eval*
                  env v
                  (fn [evaled-v]
                    (let [[_ head tail] globe]
@@ -487,7 +490,7 @@
                 (bel-optional? var-head)
                 (if (not= bel-nil arg-head)
                   (f scope (bel-optional-var var-head) arg-head done-f)
-                  (bel-eval
+                  (bel-eval*
                    env
                    (bel-optional-arg var-head)
                    (fn [evaled-arg]
@@ -539,7 +542,7 @@
      args-sym-head
      args-head
      (fn [new-scope]
-       (bel-eval
+       (bel-eval*
         (assoc env :scope new-scope)
         body-head
         done-f)))))
@@ -548,18 +551,18 @@
   (eval-clo
    env clo args-head
    (fn [code]
-     (bel-eval env code done-f))))
+     (bel-eval* env code done-f))))
 
 (defn eval-if [env [_ test-form [_ consequent-form r]] done-f]
-  (bel-eval
+  (bel-eval*
    env test-form
    (fn [evaled-test-form]
      (if (not= evaled-test-form
                bel-nil)
-       (bel-eval env consequent-form done-f)
+       (bel-eval* env consequent-form done-f)
        (cond
          (= bel-nil r) (done-f r)
-         (= bel-nil (p-cdr r)) (bel-eval env (p-car r) done-f)
+         (= bel-nil (p-cdr r)) (bel-eval* env (p-car r) done-f)
          :else (eval-if env r done-f))))))
 
 (defn eval-pairs [env head done-f]
@@ -567,7 +570,7 @@
             (if (= p bel-nil)
               (done-f (-> res <-pairs))
 
-              (bel-eval
+              (bel-eval*
                env
                (p-car p)
                (fn [evaled-h]
@@ -614,7 +617,7 @@
     (throw (Exception. "err unsupported fn call"))))
 
 (defn eval-apply [env [_ f apply-head] done-f]
-  (bel-eval
+  (bel-eval*
    env
    f
    (fn [evaled-lit]
@@ -638,7 +641,7 @@
     (= bel-apply l) (eval-apply env r done-f)
     :else
     (let [[_ f args-head] x]
-      (bel-eval
+      (bel-eval*
        env f
        (fn [evaled-lit]
          (assert-lit evaled-lit)
@@ -651,7 +654,7 @@
 
 (defn eval-backquoted-form [env [t [h-t :as h] r :as form] done-f]
   (cond
-    (= t :comma) (bel-eval env (second form) done-f)
+    (= t :comma) (bel-eval* env (second form) done-f)
 
     (not= t :pair) (done-f form)
 
@@ -668,7 +671,7 @@
             evaled-r))))))
 
     (= h-t :comma)
-    (bel-eval
+    (bel-eval*
      env (second h)
      (fn [evaled-second-h]
        (eval-backquoted-form
@@ -678,7 +681,7 @@
            (make-pair evaled-second-h evaled-r))))))
 
     (= h-t :splice)
-    (bel-eval
+    (bel-eval*
      env (second h)
      (fn [evaled-second-h]
        (eval-backquoted-form
@@ -723,7 +726,7 @@
   (and (pair-proper? a)
        (pair-every? (fn [[t]] (= t :char)) a)))
 
-(defn bel-eval [{:keys [globe] :as env} form done-f]
+(defn bel-eval* [{:keys [globe] :as env} form done-f]
   (let [vmark (find-vmark globe)
         [t] form]
     (cond
@@ -732,6 +735,22 @@
       (bel-variable? vmark form) (eval-variable env form done-f)
       (= t :pair) (eval-pair env form done-f)
       (= t :backquote) (eval-backquote env form done-f))))
+
+(defn bel-eval [env form done-f]
+  (try
+    (bel-eval* env form done-f)
+    (catch ExceptionInfo _e) ; ignore, caused by err signal
+    (catch Exception e
+      (bel-eval*
+       env
+       (make-pair
+        [:symbol "err"]
+        (make-pair
+         (clojure-str->bel-str "Uncaught bel error")
+         (make-pair
+          (make-pair bel-lit (make-pair e bel-nil))
+          bel-nil)))
+       done-f))))
 
 (defn run [& ss]
   (let [a (atom [])
@@ -794,6 +813,5 @@
   (time (apply run (readable-source))))
 
 ; next up
-; okay, now, (car x), if err is thrown, does not actually look up `err`
-; and throw it. What should we do?
+; hm, why is safe not working?
 ; waiting: -- what should happen if we see (fn ((nil . nil) x) y)

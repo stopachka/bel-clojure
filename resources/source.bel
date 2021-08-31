@@ -250,18 +250,16 @@
              (let ,var (cdr ,w) ,fail)
              (let ,var ,w ,ok))))))
 
-(ccc (fn (c)
-         (dyn err (fn (x) (c 'hello))
-           (car 'b))))
-
-===BREAK===
-
 (mac onerr (e1 e2)
   (let v (uvar)
     `(eif ,v ,e2 ,e1 ,v)))
 
 (mac safe (expr)
   `(onerr nil ,expr))
+
+(safe (car '(a b)))
+
+===BREAK===
 
 (def literal (e)
   (or (in e t nil o apply)

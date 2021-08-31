@@ -1986,11 +1986,13 @@ Now let's look at eif. It's like if except that which of its
 arguments get evaluated depends not on whether its test expression
 returns true, but whether it causes an error.
 
-> (eif x (car 'a)
+> 
+(eif x (car 'a)
          'oops
          x)
 oops
-> (eif x (car '(a b))
+> 
+(eif x (car '(a b))
          'oops
          x)
 a
