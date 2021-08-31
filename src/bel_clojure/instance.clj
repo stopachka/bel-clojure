@@ -271,16 +271,57 @@
   (println x))
 
 (declare bel-eval)
+(declare eval-pairs)
 
-(defn p-ccc [{:keys [env done-f]} f-form]
-  (let [cont (<-pairs [bel-lit bel-cont done-f])]
+(defn p-ccc [{:keys [env done-f]} args-head]
+  (eval-pairs
+   env args-head
+   (fn [evaled-args-head]
+     (let [cont (<-pairs [bel-lit bel-cont done-f])]
+       (bel-eval
+        env
+        (make-pair (p-car evaled-args-head)
+                   (make-pair cont bel-nil))
+        done-f)))))
+
+(declare find-vmark)
+(declare make-env-pair)
+
+(defn remove-variable! [var-pair-head sym-to-remove]
+  (cond
+    (= bel-nil var-pair-head)
+    bel-nil
+
+    (= (p-car (p-car var-pair-head)) sym-to-remove)
+    (do
+      (p-xar var-pair-head
+             (p-car (p-cdr var-pair-head)))
+      (p-xdr var-pair-head
+             (p-cdr (p-cdr var-pair-head))))
+
+    :else
+    (remove-variable! (p-cdr var-pair-head) sym-to-remove)))
+
+(defn p-dyn [{:keys [env done-f]} args-head]
+  (let [{:keys [globe dyn]} env
+        [_ v [_ x [_ y]]] args-head
+        vmark (find-vmark globe)]
     (bel-eval
      env
-     (make-pair f-form (make-pair cont bel-nil))
-     done-f)))
-
+     x
+     (fn [evaled-x]
+       (let [[_ head tail] dyn]
+         (p-xar dyn (make-env-pair vmark v evaled-x))
+         (p-xdr dyn (make-pair head tail))
+         (bel-eval
+          env
+          y
+          (fn [res]
+            (remove-variable! dyn v)
+            (done-f res))))))))
 ;; Globe
 ;; -------------
+
 
 (def sync-prim-name->fn
   {"id" #'p-id
@@ -295,7 +336,8 @@
    "coin" #'p-coin
    "p-debug" #'p-debug})
 
-(def async-prim-name->fn {"ccc" #'p-ccc})
+(def async-prim-name->fn {"ccc" #'p-ccc
+                          "dyn" #'p-dyn})
 
 (defn make-bel-globe []
   (->> (merge sync-prim-name->fn async-prim-name->fn)
@@ -316,13 +358,13 @@
                     (fn [p] (= bel-t (p-id to-find (p-car p))))))]
     (when (not= v bel-nil) v)))
 
-(defn eval-variable [{:keys [scope globe]} form done-f]
+(defn eval-variable [{:keys [scope globe dyn]} form done-f]
   (cond
     (#{bel-nil bel-t bel-o bel-apply} form) (done-f form)
     (= bel-globe form) (done-f globe)
     (= bel-scope form) (done-f scope)
     :else
-    (let [v (->> [scope globe]
+    (let [v (->> [dyn scope globe]
                  (some (partial find-env-pair form)))]
       (assert v (format "expected value for variable = %s" form))
       (done-f (p-cdr v)))))
@@ -343,17 +385,34 @@
              "too many args = %s niled-args = %s niled-args" args res))
     res))
 
-(defn eval-prim [env r args-head done-f]
+(defn eval-prim
+  "Sync-f expects niled args as a seq
+   Async-f expects unevaled args.
+   This is necessary, because dyn for example, requires
+   special evaluation rules.
+
+   This is unfortunate. Now callers of this fn
+   need to make sure that args are unevaled.
+
+   It feels like a smell, and perhaps we should refactor it,
+   but let's move on for now"
+  [env r args-head done-f]
   (let [[_ [_ n]] r
-        args (pair->clojure-seq args-head)
         sync-f (sync-prim-name->fn n)
         async-f (async-prim-name->fn n)]
     (cond
-      sync-f (done-f (apply sync-f (fill-nil-args sync-f args)))
-      async-f (apply async-f
-                     (fill-nil-args async-f
-                                    (concat [{:env env :done-f done-f}]
-                                            args))))))
+      sync-f
+      (eval-pairs
+       env args-head
+       (fn [evaled-args-head]
+         (done-f
+          (apply sync-f
+                 (fill-nil-args sync-f
+                                (pair->clojure-seq evaled-args-head))))))
+
+      async-f
+      (apply async-f
+             [{:env env :done-f done-f} args-head]))))
 
 (defn find-vmark
   "This needs to run on every eval, which
@@ -522,7 +581,8 @@
     (<-pairs (concat but-last ls))))
 
 (defn assert-lit [[_ lit :as form]]
-  (assert (= bel-lit lit) "expected lit expression")
+  (assert (= bel-lit lit)
+          (format "expected lit expression got = %s" form))
   form)
 
 (defn lit-type [[_ _lit [_ t]]] t)
@@ -573,7 +633,7 @@
        env f
        (fn [evaled-lit]
          (assert-lit evaled-lit)
-         (if (= bel-mac (lit-type evaled-lit))
+         (if (#{bel-mac bel-prim} (lit-type evaled-lit))
            (eval-lit env evaled-lit args-head done-f)
            (eval-pairs
             env args-head
@@ -666,7 +726,8 @@
 
 (defn run [& ss]
   (let [a (atom [])
-        env {:globe (make-bel-globe) :scope bel-nil}]
+        env {:globe (make-bel-globe) :scope bel-nil
+             :dyn (make-pair bel-nil bel-nil)}]
     (->> ss
          (map (fn [s]
                 (bel-eval env (bel-parse s)
