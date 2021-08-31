@@ -238,14 +238,17 @@
 (comment
   (p-xdr (bel-parse "(a . b)") (bel-parse "c")))
 
+(defn bel-string->str [p]
+  (let [cs (pair->clojure-seq p)]
+    (assert (every? (comp (partial = :char) first) cs)
+            "Expected a string")
+    (->> cs (map second) cstring/join)))
+
 (defn p-sym [char-pairs]
-  (let [cs (pair->clojure-seq char-pairs)
-        _  (assert (every? (comp (partial = :char) first) cs)
-                   "Expected a string")]
-    [:symbol (->> cs (map second) cstring/join)]))
+  [:symbol (bel-string->str char-pairs)])
 
 (comment
-  (p-sym (p-cdr (bel-parse "\"foo\""))))
+  (p-sym (bel-parse "\"foo\"")))
 
 (defn p-nom [[t v]]
   (assert (= t :symbol) "expected symbol")
@@ -256,7 +259,11 @@
 (comment
   (p-nom (bel-parse "foo")))
 
+(defn p-err [msg]
+  (throw (Exception. (format "Bel error = %s" (bel-string->str msg)))))
+
 ;; todo: primitives for streams, sys
+
 
 (defn p-coin [] (rand-nth [bel-t bel-nil]))
 
@@ -319,6 +326,7 @@
           (fn [res]
             (remove-variable! dyn v)
             (done-f res))))))))
+
 ;; Globe
 ;; -------------
 
@@ -334,7 +342,8 @@
    "sym" #'p-sym
    "nom" #'p-nom
    "coin" #'p-coin
-   "p-debug" #'p-debug})
+   "p-debug" #'p-debug
+   "err" #'p-err})
 
 (def async-prim-name->fn {"ccc" #'p-ccc
                           "dyn" #'p-dyn})
@@ -785,5 +794,6 @@
   (time (apply run (readable-source))))
 
 ; next up
-; def screwing something up with ccc -- keep thinking
+; okay, now, (car x), if err is thrown, does not actually look up `err`
+; and throw it. What should we do?
 ; waiting: -- what should happen if we see (fn ((nil . nil) x) y)

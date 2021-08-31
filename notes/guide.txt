@@ -1940,7 +1940,8 @@ One thing we can use continuations for is aborting computations. If
 we save a continuation before starting something, then by calling the
 continuation we can escape from the middle of it.
 
-> (ccc (fn (c)
+> 
+(ccc (fn (c)
          (dyn abort c
            (do (abort 'a)
                (car 'b)))))
@@ -1959,7 +1960,8 @@ abort, we can take over what happens when an error is signalled.
 
 Here we rebind err to return hello when an error occurs:
 
-> (ccc (fn (c)
+> 
+(ccc (fn (c)
          (dyn err (fn (x) (c 'hello))
            (car 'b))))
 hello

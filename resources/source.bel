@@ -250,19 +250,9 @@
              (let ,var (cdr ,w) ,fail)
              (let ,var ,w ,ok))))))
 
-(list 'a (ccc (fn (c)
-                  (set cont c)
-                  'b)))
-
-(cont 'z)
-
-(set x 'a)
-
-x
-
-(dyn x 'z (join x 'b))
-
-x
+(ccc (fn (c)
+         (dyn err (fn (x) (c 'hello))
+           (car 'b))))
 
 ===BREAK===
 
