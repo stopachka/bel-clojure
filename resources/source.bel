@@ -20,6 +20,7 @@
 
 ; /stopa-edit
 
+
 (def no (x)
   (id x nil))
 
@@ -658,8 +659,6 @@
                 (op (apply f args) (apply g args))))
             (or fs (list (con (op)))))))
 
-===BREAK===
-
 (set cand (combine and)
      cor  (combine or))
 
@@ -681,6 +680,11 @@
 
 (def upon args
   [apply _ args])
+
+(map (upon '(a b c))
+       (list car cadr cdr))
+
+===BREAK===
 
 (def pairwise (f xs)
   (or (no (cdr xs))

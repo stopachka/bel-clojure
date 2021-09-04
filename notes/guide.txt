@@ -2944,7 +2944,8 @@ And upon is a sort of reverse call, in the sense that it saves an
 argument, and then tells you what calling things on that argument
 will return:
 
-> (map (upon '(a b c))
+> 
+(map (upon '(a b c))
        (list car cadr cdr))
 (a b (b c))
 

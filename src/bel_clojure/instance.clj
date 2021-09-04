@@ -272,7 +272,6 @@
 
 ;; todo: primitives for streams, sys
 
-
 (defn p-coin [] (rand-nth [bel-t bel-nil]))
 
 (comment (p-coin))
@@ -601,7 +600,9 @@
         ls (if (= :pair last-t)
              (pair->clojure-seq l)
              [l])]
-    (<-pairs (concat but-last ls))))
+    (->> (concat but-last ls)
+         (map (fn [x] (make-quoted-pair x)))
+         <-pairs)))
 
 (defn assert-lit [[_ lit :as form]]
   (assert (= bel-lit lit)
@@ -628,20 +629,16 @@
     (throw (Exception. "err unsupported fn call"))))
 
 (defn eval-apply [env [_ f apply-head] done-f]
-  (bel-eval*
+  (eval-pairs
    env
-   f
-   (fn [evaled-lit]
-     (assert-lit evaled-lit)
-     (eval-pairs
+   apply-head
+   (fn [evaled-head]
+     (bel-eval*
       env
-      apply-head
-      (fn [evaled-head]
-        (eval-lit
-         env
-         evaled-lit
-         (apply-head->args-head evaled-head)
-         done-f))))))
+      (make-pair
+       f
+       (apply-head->args-head evaled-head))
+      done-f))))
 
 (defn eval-pair [env [_ l r :as x] done-f]
   (cond
@@ -737,7 +734,10 @@
   (and (pair-proper? a)
        (pair-every? (fn [[t]] (= t :char)) a)))
 
+(def forms (atom []))
+(take-last 10 @forms)
 (defn bel-eval* [{:keys [globe] :as env} form done-f]
+  (swap! forms conj form)
   (let [vmark (find-vmark globe)
         [t] form]
     (cond
@@ -822,11 +822,8 @@
 
 (comment
   (map bel-parse (readable-source))
-  (time (apply run (readable-source)))
-    (require '[clj-async-profiler.core :as prof])
- (prof/profile (apply run (readable-source)))
-  )
+  (time (apply run (readable-source))))
 
 ; next up
-; compose is not working. it's also getting veeery slow. time to speed up?
+; It's also getting veeery slow. time to speed up?
 ; waiting: -- what should happen if we see (fn ((nil . nil) x) y)
