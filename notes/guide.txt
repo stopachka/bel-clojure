@@ -2995,7 +2995,9 @@ list of variables.
 We use letu in pcase, which is like a case statement but with
 predicates as the keys.
 
-> (map [pcase _
+> 
+
+(map [pcase _
          no   'empty
          atom 'atom
               'pair]

@@ -684,8 +684,6 @@
 (map (upon '(a b c))
        (list car cadr cdr))
 
-===BREAK===
-
 (def pairwise (f xs)
   (or (no (cdr xs))
       (and (f (car xs) (cadr xs))
@@ -789,6 +787,10 @@
   (list (if (and (= s '+) (~= n i0)) '- '+)
         n
         d))
+
+(i* i2 i2)
+
+===BREAK===
 
 (def sr* ((xs . xr) (ys . yr))
   (cons (if (= xs '-)
