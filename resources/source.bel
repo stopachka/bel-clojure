@@ -259,7 +259,7 @@
 
 (safe (car '(a b)))
 
-===BREAK===
+(safe (car 'a))
 
 (def literal (e)
   (or (in e t nil o apply)
@@ -657,6 +657,8 @@
               (fn args
                 (op (apply f args) (apply g args))))
             (or fs (list (con (op)))))))
+
+===BREAK===
 
 (set cand (combine and)
      cor  (combine or))

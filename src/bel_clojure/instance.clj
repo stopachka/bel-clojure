@@ -3,7 +3,8 @@
    [clojure.java.io :as io]
    [instaparse.core :as insta]
    [clojure.string :as cstring]
-   [clojure.walk :as walk])
+   [clojure.walk :as walk]
+   [clojure.core.async :refer [thread]])
   (:import
    (java.util ArrayList)
    (clojure.lang ExceptionInfo)))
@@ -16,7 +17,7 @@
 (def bel-t [:symbol "t"])
 (def bel-dot [:dot "."])
 (def bel-lit [:symbol "lit"])
-(def bel-cont [:symbol "cont"])
+(def bel-cont [:symbol "cont-instance"])
 (def bel-prim [:symbol "prim"])
 (def bel-o [:symbol "o"])
 (def bel-apply [:symbol "apply"])
@@ -167,10 +168,12 @@
   (bel-parse "`(foo ,a ,@b)")
   (bel-parse "=")
   (bel-parse ">=")
-  (bel-parse "[id _ (car args)]"))
+  (bel-parse "[id _ (car args)]")
+  (bel-parse "e1"))
 
 ;; Primitives
 ;; ----------
+
 
 (defn p-id [[t-a :as a] b]
   (let [id-f (if (= t-a :pair) identical? =)]
@@ -332,6 +335,13 @@
             (remove-variable! dyn v)
             (done-f res))))))))
 
+(defn p-thread [{:keys [env done-f]} args-head]
+  (thread
+    (bel-eval*
+     (assoc env :dyn (make-pair bel-nil bel-nil))
+     (p-car args-head)
+     done-f)))
+
 ;; Globe
 ;; -------------
 
@@ -351,7 +361,8 @@
    "err" #'p-err})
 
 (def async-prim-name->fn {"ccc" #'p-ccc
-                          "dyn" #'p-dyn})
+                          "dyn" #'p-dyn
+                          "thread" #'p-thread})
 
 (defn make-bel-globe []
   (->> (merge sync-prim-name->fn async-prim-name->fn)
@@ -740,7 +751,8 @@
   (try
     (bel-eval* env form done-f)
     (catch ExceptionInfo _e) ; ignore, caused by err signal
-    (catch Exception e
+    (catch
+     Exception e
       (bel-eval*
        env
        (make-pair
@@ -810,8 +822,11 @@
 
 (comment
   (map bel-parse (readable-source))
-  (time (apply run (readable-source))))
+  (time (apply run (readable-source)))
+    (require '[clj-async-profiler.core :as prof])
+ (prof/profile (apply run (readable-source)))
+  )
 
 ; next up
-; hm, why is safe not working?
+; compose is not working. it's also getting veeery slow. time to speed up?
 ; waiting: -- what should happen if we see (fn ((nil . nil) x) y)

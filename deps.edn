@@ -1,5 +1,9 @@
 {:paths ["src" "resources"]
- :deps {instaparse/instaparse {:mvn/version "1.4.10"}}
+ :deps {instaparse/instaparse {:mvn/version "1.4.10"}
+        com.clojure-goes-fast/clj-async-profiler {:mvn/version "0.5.1"}
+        org.clojure/core.async {:mvn/version "1.3.618"}}
+ :jvm-opts ["-Djdk.attach.allowAttachSelf" "Xss50M"]
  :aliases {:nREPL
-           {:extra-deps
+           {:jvm-opts ["-XX:-Djdk.attach.allowAttachSelf" "-XX:Xss50M"]
+            :extra-deps
             {nrepl/nrepl {:mvn/version  "0.8.3"}}}}}

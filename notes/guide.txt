@@ -1917,7 +1917,7 @@ Here's some simple code that makes a list:
 Now let's try replacing the 'b with an expression that saves the
 current continuation before returning b:
 
-> 
+>
 (list 'a (ccc (fn (c)
                   (set cont c)
                   'b)))
@@ -1940,7 +1940,7 @@ One thing we can use continuations for is aborting computations. If
 we save a continuation before starting something, then by calling the
 continuation we can escape from the middle of it.
 
-> 
+>
 (ccc (fn (c)
          (dyn abort c
            (do (abort 'a)
@@ -1960,7 +1960,7 @@ abort, we can take over what happens when an error is signalled.
 
 Here we rebind err to return hello when an error occurs:
 
-> 
+>
 (ccc (fn (c)
          (dyn err (fn (x) (c 'hello))
            (car 'b))))
@@ -1986,12 +1986,12 @@ Now let's look at eif. It's like if except that which of its
 arguments get evaluated depends not on whether its test expression
 returns true, but whether it causes an error.
 
-> 
+>
 (eif x (car 'a)
          'oops
          x)
 oops
-> 
+>
 (eif x (car '(a b))
          'oops
          x)
@@ -2029,6 +2029,7 @@ oops
 
 and the safe macro simply returns nil if the expression within
 it causes an error:
+
 
 > (safe (car '(a b)))
 a
@@ -2855,7 +2856,7 @@ Now we can understand the idiomatic definition of all that I gave
 early on:
 
 (def all (f xs)
-  (~some ~f xs))
+  (~some ~f xs)
 
 It's actually inaccurate to say that compose operates on functions,
 because it can operate on anything that we can call like a function.
@@ -2864,7 +2865,7 @@ because it can operate on anything that we can call like a function.
 b
 
 I could solve this problem by inventing some new term for things
-that can be called like functions, but that seems a bit bogus, so
+that can be called lie functions, but that seems a bit bogus, so
 instead I'm going to be irresponsible and just talk about functions
 when I mean things callable like functions. Because the fact is that
 just about anywhere you can use a function, you can use anything else
