@@ -825,7 +825,8 @@
   (time (apply run (readable-source))))
 
 ; next up
+; It's also getting veeery slow. time to speed up?
+; - what's a way I can hack this?
 ; implement ~ reader, as well as x:y
 ; implement num->lit?
-; It's also getting veeery slow. time to speed up?
 ; waiting: -- what should happen if we see (fn ((nil . nil) x) y)
