@@ -141,6 +141,14 @@
                       (make-pair
                        (<-pairs xs)
                        bel-nil))))))
+(def comp->pair
+  (form-transform :comp
+                  (fn [[_ & fs]]
+                    (make-pair
+                     [:symbol "compose"]
+                     (->> fs
+                           (map (fn [n] [:symbol n]))
+                           <-pairs)))))
 
 (def parse-string (-> "bel.ebnf" io/resource insta/parser))
 
@@ -151,7 +159,8 @@
    quote->pair
    unwrap-name
    unwrap-sexp
-   abbrev-fn->pair))
+   abbrev-fn->pair
+   #_comp->pair))
 
 (def bel-parse
   (comp (partial walk/postwalk parse-postwalk) parse-string))
@@ -171,7 +180,10 @@
   (bel-parse "[id _ (car args)]")
   (bel-parse "e1")
   (bel-parse "car:cdr")
-  (bel-parse "car:cdr:cdr"))
+  (bel-parse "car:cdr:cdr")
+  (bel-parse "~f")
+  (bel-parse "~f:car")
+  )
 
 ;; Primitives
 ;; ----------
