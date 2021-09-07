@@ -169,7 +169,9 @@
   (bel-parse "=")
   (bel-parse ">=")
   (bel-parse "[id _ (car args)]")
-  (bel-parse "e1"))
+  (bel-parse "e1")
+  (bel-parse "car:cdr")
+  (bel-parse "car:cdr:cdr"))
 
 ;; Primitives
 ;; ----------
@@ -258,6 +260,7 @@
   (->> v
        (map (fn [c] [:char (str c)]))
        <-pairs))
+
 (defn p-nom [[t v]]
   (assert (= t :symbol) "expected symbol")
   (clojure-str->bel-str v))
@@ -436,12 +439,18 @@
       (apply async-f
              [{:env env :done-f done-f} args-head]))))
 
+(def vmark-cache (atom {}))
 (defn find-vmark
   "This needs to run on every eval, which
   certainly slows things down. We may want to
   consider an optimization soonish"
   [globe]
-  (some-> (find-env-pair bel-vmark-sym globe) p-cdr))
+  (or (get @vmark-cache globe)
+      (let [v (some-> (find-env-pair bel-vmark-sym globe) p-cdr)]
+        (when v
+          (println "busted cache")
+          (swap! vmark-cache assoc globe v)
+          v))))
 
 (defn bel-variable? [[vmark-t :as vmark] [var-t :as var-head]]
   (or
@@ -764,17 +773,20 @@
           bel-nil)))
        done-f))))
 
-(defn run [& ss]
-  (let [a (atom [])
-        env {:globe (make-bel-globe) :scope bel-nil
-             :dyn (make-pair bel-nil bel-nil)}]
-    (->> ss
-         (map (fn [s]
-                (bel-eval env (bel-parse s)
-                          (fn [x]
-                            (swap! a conj x)))))
-         doall)
-    (take-last 2 @a)))
+(defn make-env []
+  {:globe (make-bel-globe) :scope bel-nil
+   :dyn (make-pair bel-nil bel-nil)})
+
+(defn eval-forms [env forms]
+  (let [results (atom [])]
+    (doseq [form forms]
+      (bel-eval env (bel-parse form)
+                (fn [x]
+                  (swap! results conj x))))
+    {:last-2-results (take-last 2 @results) :env env}))
+
+(defn run [& forms]
+  (:last-2-results (eval-forms (make-env) forms)))
 
 (comment
   (run "\\bel")
@@ -803,11 +815,7 @@
 ;; Source Reader
 ;; -------------
 
-(defn readable-source
-  "I've added a BREAK character. This way,
-   we can incrementally evaluate the source,
-   and build up this interpreter"
-  []
+(defn source []
   (->> (-> (io/resource "source.bel")
            slurp
            (cstring/split #"\n"))
@@ -816,17 +824,25 @@
        (remove (fn [s]
                  (cstring/starts-with? s ";")))
 
-       (remove cstring/blank?)
-       (take-while
-        (fn [s] (not= s "===BREAK===")))))
+       (remove cstring/blank?)))
+
+(defn ready-source []
+  (->> (source)
+       (take-while (fn [s] (not= s "===READY===")))))
+
+(defn testing-source []
+  (->> (source)
+       (drop-while (fn [s] (not= s  "===READY===")))
+       (drop 1)
+       (take-while (fn [s] (not= s "===TESTING===")))))
 
 (comment
-  (map bel-parse (readable-source))
-  (time (apply run (readable-source))))
+  (def ready-env (time (:env (eval-forms (make-env)
+                                         (ready-source)))))
+  (time
+   (:last-2-results (eval-forms ready-env (testing-source)))))
 
 ; next up
-; It's also getting veeery slow. time to speed up?
-; - what's a way I can hack this?
 ; implement ~ reader, as well as x:y
 ; implement num->lit?
 ; waiting: -- what should happen if we see (fn ((nil . nil) x) y)

@@ -1,6 +1,14 @@
 ; Bel in Bel. 9 October 2019, 9:14 GMT
 
 ; stopa-edit
+; putting vmark up front
+; this lets instance interpreter cache the lookup
+
+(set vmark (join))
+
+; /stopa-edit
+
+; stopa-edit
 ; Writing a poor man's def, to let PG's code run,
 ; before he defines it
 
@@ -95,8 +103,6 @@
   (if (no (cdr body))
       `(list 'lit 'clo scope ',parms ',(car body))
       `(list 'lit 'clo scope ',parms '(do ,@body))))
-
-(set vmark (join))
 
 (def uvar ()
   (list vmark))
@@ -662,6 +668,12 @@
 (set cand (combine and)
      cor  (combine or))
 
+===READY===
+
+((compose car cdr) '(a b c))
+
+===TESTING===
+
 (def foldl (f base . args)
   (if (or (no args) (some no args))
       base
@@ -787,10 +799,6 @@
   (list (if (and (= s '+) (~= n i0)) '- '+)
         n
         d))
-
-(i* i2 i2)
-
-===BREAK===
 
 (def sr* ((xs . xr) (ys . yr))
   (cons (if (= xs '-)
