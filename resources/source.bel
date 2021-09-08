@@ -668,13 +668,6 @@
 (set cand (combine and)
      cor  (combine or))
 
-===READY===
-
-((compose car cdr) '(a b c))
-
-(car:cdr '(a b c))
-
-===TESTING===
 
 (def foldl (f base . args)
   (if (or (no args) (some no args))
@@ -691,6 +684,7 @@
 
 (def of (f g)
   (fn args (apply f (map g args))))
+
 
 (def upon args
   [apply _ args])
@@ -720,6 +714,7 @@
            (if (,(car args) ,v)
                ,(cadr args)
                (pcase ,v ,@(cddr args)))))))
+
 
 (def match (x pat)
   (if (= pat t)                t

@@ -69,8 +69,6 @@ tried to avoid gratuitous departures from existing Lisp conventions.
 Which means if you see a departure from existing conventions, there
 is probably a reason for it.
 
-
-
 Data
 
 Bel has four fundamental data types:
@@ -2882,7 +2880,9 @@ will yield a function equivalent to
 (fn (x)
   (and (car x) (cdr x)))
 
-> (map ((combine and) car cdr)
+>
+
+(map ((combine and) car cdr)
        '((a . nil) (a . b) (nil . b)))
 (nil t nil)
 
@@ -2944,7 +2944,7 @@ And upon is a sort of reverse call, in the sense that it saves an
 argument, and then tells you what calling things on that argument
 will return:
 
-> 
+>
 (map (upon '(a b c))
        (list car cadr cdr))
 (a b (b c))
@@ -2995,7 +2995,7 @@ list of variables.
 We use letu in pcase, which is like a case statement but with
 predicates as the keys.
 
-> 
+>
 
 (map [pcase _
          no   'empty
@@ -3008,7 +3008,8 @@ The next function, match, is like = except that functions occurring
 in the second argument are treated as predicates, and ts match
 everything.
 
-> (match '(a (b) c d) (list 'a pair 'c t))
+>
+(match '(a (b) c d) (list 'a pair 'c t))
 t
 
 The split function breaks its second argument at the point where its
@@ -3098,6 +3099,8 @@ and pos for finding the position of something in one
 1
 
 (In Bel, lists are one-indexed.)
+
+===
 
 We use pos in charn, which returns a unique integer for each
 character based on its position in chars, a list of all the

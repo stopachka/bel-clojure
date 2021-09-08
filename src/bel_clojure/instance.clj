@@ -862,6 +862,8 @@
    (:last-2-results (eval-forms ready-env (testing-source)))))
 
 ; next up
-; implement ~ reader, as well as x:y
+; now we're on to numbers. How much of it do I really need to implement?
+; maybe just the work of 0?
+; in that case, perhaps I could just def it?
 ; implement num->lit?
 ; waiting: -- what should happen if we see (fn ((nil . nil) x) y)
