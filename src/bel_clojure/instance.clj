@@ -141,14 +141,23 @@
                       (make-pair
                        (<-pairs xs)
                        bel-nil))))))
+(defn <-compose [xs]
+  (make-pair
+   [:symbol "compose"]
+   (<-pairs xs)))
+
 (def comp->pair
   (form-transform :comp
-                  (fn [[_ & fs]]
-                    (make-pair
-                     [:symbol "compose"]
-                     (->> fs
-                           (map (fn [n] [:symbol n]))
-                           <-pairs)))))
+                  (fn [[_ & xs]]
+                    (<-compose
+                     (reduce
+                      (fn [ret [t r :as x]]
+                        (into ret
+                              (if (= t :no_comp)
+                                [[:symbol "no"] r]
+                                [x])))
+                      []
+                      xs)))))
 
 (def parse-string (-> "bel.ebnf" io/resource insta/parser))
 
@@ -160,7 +169,7 @@
    unwrap-name
    unwrap-sexp
    abbrev-fn->pair
-   #_comp->pair))
+   comp->pair))
 
 (def bel-parse
   (comp (partial walk/postwalk parse-postwalk) parse-string))
@@ -182,12 +191,10 @@
   (bel-parse "car:cdr")
   (bel-parse "car:cdr:cdr")
   (bel-parse "~f")
-  (bel-parse "~f:car")
-  )
+  (bel-parse "~f:car"))
 
 ;; Primitives
 ;; ----------
-
 
 (defn p-id [[t-a :as a] b]
   (let [id-f (if (= t-a :pair) identical? =)]

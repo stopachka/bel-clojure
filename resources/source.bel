@@ -672,6 +672,8 @@
 
 ((compose car cdr) '(a b c))
 
+(car:cdr '(a b c))
+
 ===TESTING===
 
 (def foldl (f base . args)
