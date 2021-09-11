@@ -191,7 +191,12 @@
   (bel-parse "car:cdr")
   (bel-parse "car:cdr:cdr")
   (bel-parse "~f")
-  (bel-parse "~f:car"))
+  (bel-parse "~f:car")
+  (bel-parse "car:i/")
+  (bel-parse "i*")
+  (bel-parse "i<")
+  (bel-parse "i^")
+  )
 
 ;; Primitives
 ;; ----------
@@ -763,7 +768,7 @@
        (pair-every? (fn [[t]] (= t :char)) a)))
 
 (def forms (atom []))
-(take-last 10 @forms)
+(-> forms)
 (defn bel-eval* [{:keys [globe] :as env} form done-f]
   (swap! forms conj form)
   (let [vmark (find-vmark globe)
@@ -858,12 +863,13 @@
 (comment
   (def ready-env (time (:env (eval-forms (make-env)
                                          (ready-source)))))
+  (->> (ready-source)
+       (map bel-parse))
   (time
    (:last-2-results (eval-forms ready-env (testing-source)))))
 
 ; next up
-; now we're on to numbers. How much of it do I really need to implement?
-; maybe just the work of 0?
-; in that case, perhaps I could just def it?
-; implement num->lit?
+; why doesn't + get called?
+; are errors not bouncing up anymore?
+; potential optim for later: maps in env lookup
 ; waiting: -- what should happen if we see (fn ((nil . nil) x) y)

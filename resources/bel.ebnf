@@ -13,6 +13,6 @@ quote = <'\''> sexp
 backquote = <'`'> sexp
 comma = <','> sexp
 splice = <',@'> sexp
-name = #'[a-zA-Z0-9!\-*+_=>]+'
+name = #'[a-zA-Z0-9!\-*+_=>\/<\^]+'
 any_char = #'.'
 whitespace = #'\s+'

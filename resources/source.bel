@@ -883,11 +883,33 @@
       (buildnum (sr/ r d)
                 (sr/ (srinv i) d)))))
 
+; stopa-edit
+; hack to make PG's code below work,
+; without the instance interpreter having to
+; implement number parsing
+; (PG's source only requires that we parse `0`!)
+
+(def 0 (lit num (+ () (t)) (+ () (t))))
+
+(def 2 (lit num (+ (t t t t) (t)) (+ () (t))))
+
+; /stopa-edit
+
 (def + ns
+  (p-debug ns)
   (foldr (fn (x y)
+           (p-debug ((of c+ cddr) x y))
            (apply buildnum ((of c+ cddr) x y)))
          0
          ns))
+
+===READY===
+
+(p-debug +)
+
+(+ 2 2)
+
+===TESTING===
 
 (def - ns
   (if (no ns)       0
