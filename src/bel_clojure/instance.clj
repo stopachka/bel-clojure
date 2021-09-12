@@ -768,7 +768,13 @@
        (pair-every? (fn [[t]] (= t :char)) a)))
 
 (def forms (atom []))
-(-> forms)
+(comment
+  (->> forms
+       deref
+       (take-last 5)
+       reverse
+       )
+  )
 (defn bel-eval* [{:keys [globe] :as env} form done-f]
   (swap! forms conj form)
   (let [vmark (find-vmark globe)
@@ -786,7 +792,8 @@
     (catch ExceptionInfo _e) ; ignore, caused by err signal
     (catch
      Exception e
-      (bel-eval*
+     (println "Exception: " e)
+     (bel-eval*
        env
        (make-pair
         [:symbol "err"]
@@ -804,6 +811,7 @@
 (defn eval-forms [env forms]
   (let [results (atom [])]
     (doseq [form forms]
+      (println form)
       (bel-eval env (bel-parse form)
                 (fn [x]
                   (swap! results conj x))))
@@ -869,7 +877,7 @@
    (:last-2-results (eval-forms ready-env (testing-source)))))
 
 ; next up
-; why doesn't + get called?
-; are errors not bouncing up anymore?
+; hmm...900M and still stack overflow w/ numbers
+; how can I figure out if bug, or intended?
 ; potential optim for later: maps in env lookup
 ; waiting: -- what should happen if we see (fn ((nil . nil) x) y)

@@ -264,10 +264,6 @@
 (mac safe (expr)
   `(onerr nil ,expr))
 
-(safe (car '(a b)))
-
-(safe (car 'a))
-
 (def literal (e)
   (or (in e t nil o apply)
       (in (type e) 'char 'stream)
@@ -889,27 +885,21 @@
 ; implement number parsing
 ; (PG's source only requires that we parse `0`!)
 
-(def 0 (lit num (+ () (t)) (+ () (t))))
+(set 0 (lit num (+ () (t)) (+ () (t))))
 
-(def 2 (lit num (+ (t t t t) (t)) (+ () (t))))
+(set 1 (lit num (+ (t) (t)) (+ () (t))))
 
 ; /stopa-edit
 
+===READY===
+
 (def + ns
-  (p-debug ns)
   (foldr (fn (x y)
-           (p-debug ((of c+ cddr) x y))
            (apply buildnum ((of c+ cddr) x y)))
          0
          ns))
 
-===READY===
-
-(p-debug +)
-
-(+ 2 2)
-
-===TESTING===
+(set 1 (lit num (+ (t) (t)) (+ () (t))))
 
 (def - ns
   (if (no ns)       0
@@ -938,6 +928,10 @@
 
 (def len (xs)
   (if (no xs) 0 (inc:len:cdr xs)))
+
+(len '(a b c))
+
+===TESTING===
 
 (def charn (c)
   (dec:pos c chars caris))
