@@ -1,16 +1,20 @@
 # bel-clojure
 
-Play: Let's create an interpreter for PG's Bel Interpreter, and run Bel on top of Clojure!
+Get ready for a mind-meld. This is an attempt to make PG's self-evaluating Bel Interpreter run on Clojure.
 
-I started this to understand his work on Bel -- what better way than to follow the guide, and implement a live version?
+Here's how it works:
 
-The Plan:
+First, there's our interpreter (called instance.clj). This interpreter is a subset of Bel. It's juust intelligent enough, to read PG's source code `source.bel`. Once the source code is read, then PG's code can take over and handle user code.
 
-We'll write a minimal interpreter -- something _just_ goood enough to interpreter PG's source code. Then, PG's source code will run it's own interpreter, and that's where user code will go too.
+```
+User Code -> PG's Source Code -> Clojure Instance Interpreter
+```
 
-Note:
+Warning: I won't be making optimizations, and since this is an interpreter on an interpreter, it will be slow. However, it can start as a REPL for the language. And who knows, one day we could optimize it and make it work for real-world programs.
 
-I won't be making optimizations, and since this is an interpreter on an interpreter, it will be slow. However, it can start as a REPL for the language. And who knows, one day we could optimize it and make it work for real-world programs.
+## Current Status
+
+You can check the `===READY===` breakpoint in `source.bel`. Right now we're about halfway through. I stopped here, as I did not implement proper tail call recursion, which is causing stack overflows. Hopefully will open this up and patch forward.
 
 # Dev
 
@@ -21,4 +25,3 @@ clj -J-Xss2M -R:nREPL -m nrepl.cmdline -p 3434 -i
 > (run "(id t t)") ; run snippets of code
 > (apply run (readable-source)) ; reads source until the breakpoint
 ```
-

@@ -879,6 +879,7 @@
       (buildnum (sr/ r d)
                 (sr/ (srinv i) d)))))
 
+
 ; stopa-edit
 ; hack to make PG's code below work,
 ; without the instance interpreter having to
@@ -930,6 +931,7 @@
   (if (no xs) 0 (inc:len:cdr xs)))
 
 (len '(a b c))
+
 
 ===TESTING===
 
