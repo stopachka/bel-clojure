@@ -29,11 +29,11 @@
 ;; Pair
 ;; ----
 
-(defn make-pair [a b]
-  (ArrayList. [:pair a b]))
-
 (defn make-quoted-pair [a]
   (make-pair bel-quote a))
+
+(defn make-pair [a b]
+  (ArrayList. [:pair a b]))
 
 (declare p-car)
 (declare p-cdr)
@@ -562,17 +562,26 @@
 
 ;;
 
+(defn stack-eval-set-2 [es rs vmark {:keys [globe]} [_ sym]]
+  (let [v (last rs)
+        rs' (vec (drop-last rs))
+        [_ head tail] globe]
+    (p-xar globe (make-env-pair vmark sym v))
+    (p-xdr globe (make-pair head tail))
+    [es rs']))
 
-(defn stack-eval-set [es rs env [_ l r :as x]]
+(defn stack-eval-set [es rs env x]
   (let [[_ sym after-sym] x
         _ (assert (not= bel-nil after-sym)
                   "Set sym needs a value")
         [_ v after-v] after-sym
-        (conj
-          [:set-return ]
-          )]
-
-    ))
+        es' (if (not= after-v bel-nil)
+              (conj es [env (make-pair bel-set after-v)])
+              es)]
+    [(conj es'
+           [env [:set-2 sym]]
+           [env v])
+     rs]))
 
 (defn stack-eval-pair [es rs env [_ l r :as x]]
   (cond
@@ -588,7 +597,7 @@
       (last rs)
       (let [[{:keys [globe] :as env} [t :as form]] (last es)
             vmark (find-vmark globe)
-            es' (drop-last es)]
+            es' (vec (drop-last es))]
         (cond
           (= t :char)
           (recur es' (conj rs form))
@@ -602,12 +611,18 @@
 
           (= t :pair)
           (let [[new-es new-rs] (stack-eval-pair es' rs env form)]
+            (recur new-es new-rs))
+
+          (= t :set-2)
+          (let [[new-es new-rs] (stack-eval-set-2 es' rs vmark env form)]
             (recur new-es new-rs)))))))
 
 (comment
+  (def globe (make-bel-globe))
+  globe
   (stack-eval
-   [[{:globe (make-bel-globe) :scope bel-nil}
-     (bel-parse "(lit foo)")]]
+   [[{:globe globe :scope bel-nil}
+     (bel-parse "(set foo 'id)")]]
 
    []))
 
