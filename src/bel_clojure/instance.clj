@@ -304,8 +304,8 @@
     (when (not= v bel-nil) v)))
 
 (comment
-  (eval-variable {:scope bel-nil
-                  :globe (make-bel-globe)} [:symbol "id"]))
+  (get-variable {:scope bel-nil
+                 :globe (make-bel-globe)} [:symbol "id"]))
 
 (defn eval-prim [_env r args-head]
   (let [[_ [_ n]] r
@@ -322,7 +322,7 @@
 
     (apply f niled-args)))
 
-(defn eval-variable [{:keys [scope globe]} form]
+(defn get-variable [{:keys [scope globe]} form]
   (cond
     (#{bel-nil bel-t bel-o bel-apply} form) form
     (= bel-globe form) globe
@@ -555,12 +555,65 @@
     (cond
       (= t :char) form
       (bel-string? form) form
-      (bel-variable? vmark form) (eval-variable env form)
+      (bel-variable? vmark form) (get-variable env form)
       (= t :pair) (eval-pair env form)
       (= t :backquote) (eval-backquote env form))))
 
+
+;;
+
+
+(defn stack-eval-set [es rs env [_ l r :as x]]
+  (let [[_ sym after-sym] x
+        _ (assert (not= bel-nil after-sym)
+                  "Set sym needs a value")
+        [_ v after-v] after-sym
+        (conj
+          [:set-return ]
+          )]
+
+    ))
+
+(defn stack-eval-pair [es rs env [_ l r :as x]]
+  (cond
+    (= bel-quote l) [es (conj rs r)]
+    (= bel-lit l) [es (conj rs x)]
+    (= bel-set l) (stack-eval-set
+                   es rs env r)))
+
+(defn stack-eval [eval-stack return-stack]
+  (loop [es eval-stack
+         rs return-stack]
+    (if (empty? es)
+      (last rs)
+      (let [[{:keys [globe] :as env} [t :as form]] (last es)
+            vmark (find-vmark globe)
+            es' (drop-last es)]
+        (cond
+          (= t :char)
+          (recur es' (conj rs form))
+
+          (bel-string? form)
+          (recur es' (conj rs form))
+
+          (bel-variable? vmark form)
+          (recur es' (conj rs
+                           (get-variable env form)))
+
+          (= t :pair)
+          (let [[new-es new-rs] (stack-eval-pair es' rs env form)]
+            (recur new-es new-rs)))))))
+
+(comment
+  (stack-eval
+   [[{:globe (make-bel-globe) :scope bel-nil}
+     (bel-parse "(lit foo)")]]
+
+   []))
+
 ;; ---
 ;; Run
+
 
 (defn ensure-seq [x]
   (seq? x)
