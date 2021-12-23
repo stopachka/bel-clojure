@@ -51,6 +51,7 @@
                             (apply append (cdr (car args))
                                           (cdr args)))))
 
+
 (def snoc args
   (append (car args) (cdr args)))
 
@@ -241,6 +242,8 @@
 (def is (x)
   [= _ x])
 
+===BREAK===
+
 (mac eif (var (o expr) (o fail) (o ok))
   (with (v (uvar)
          w (uvar)
@@ -252,7 +255,6 @@
              (let ,var (cdr ,w) ,fail)
              (let ,var ,w ,ok))))))
 
-===BREAK===
 
 (mac onerr (e1 e2)
   (let v (uvar)

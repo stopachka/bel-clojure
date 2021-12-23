@@ -1474,7 +1474,8 @@ it with let, which is a very simple macro upon fn.
 Since let expands into a fn, you have the full power of Bel parameter
 lists in the first argument.
 
-> (let (x . y) '(a b c)
+> 
+(let (x . y) '(a b c)
     (list x y))
 (a (b c))
 

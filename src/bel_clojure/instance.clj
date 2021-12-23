@@ -49,10 +49,11 @@
        :else [r]))))
 
 (defn pair-find [f p]
-  (cond
-    (= bel-nil p) p
-    (f (p-car p)) (p-car p)
-    :else (pair-find f (p-cdr p))))
+  (loop [p p]
+    (cond
+      (= bel-nil p) p
+      (f (p-car p)) (p-car p)
+      :else (recur (p-cdr p)))))
 
 (defn pair-map [f p]
   (if (= bel-nil p) bel-nil
@@ -76,8 +77,8 @@
 
 (defn pair-every? [f p]
   (if (= bel-nil p) true
-    (and (f (p-car p))
-         (pair-every? f (p-cdr p)))))
+      (and (f (p-car p))
+           (pair-every? f (p-cdr p)))))
 
 ;; Reader
 ;; ------
@@ -260,13 +261,12 @@
 
 (comment (p-coin))
 
-(def _d (atom nil))
+(declare bel->clj)
 (defn p-debug
   "Note, this is not necessary for
    Bel, but helps for debugging"
   [x]
-  (reset! _d x)
-  (println x))
+  (println (bel->clj x)))
 
 ;; Globe
 ;; -------------
@@ -303,17 +303,6 @@
                     (fn [p] (= bel-t (p-id to-find (p-car p))))))]
     (when (not= v bel-nil) v)))
 
-(defn eval-variable [{:keys [scope globe]} form]
-  (cond
-    (#{bel-nil bel-t bel-o bel-apply} form) form
-    (= bel-globe form) globe
-    (= bel-scope form) scope
-    :else
-    (let [v (->> [scope globe]
-                 (some (partial find-env-pair form)))]
-      (assert v (format "expected value for variable = %s" form))
-      (p-cdr v))))
-
 (comment
   (eval-variable {:scope bel-nil
                   :globe (make-bel-globe)} [:symbol "id"]))
@@ -332,6 +321,17 @@
                    "too many args = %s niled-args = %s niled-args" args niled-args))]
 
     (apply f niled-args)))
+
+(defn eval-variable [{:keys [scope globe]} form]
+  (cond
+    (#{bel-nil bel-t bel-o bel-apply} form) form
+    (= bel-globe form) globe
+    (= bel-scope form) scope
+    :else
+    (let [v (->> [scope globe]
+                 (some (partial find-env-pair form)))]
+      (assert v (format "expected value for variable = %s" form))
+      (p-cdr v))))
 
 (defn find-vmark
   "This needs to run on every eval, which
@@ -448,7 +448,10 @@
       :else (eval-if env r))))
 
 (defn eval-pairs [env head]
-  (pair-map (partial bel-eval env) head))
+  (->> head
+       pair->clojure-seq
+       (map (partial bel-eval env))
+       <-pairs))
 
 (defn apply-head->args-head [x]
   (let [xs (pair->clojure-seq x)
@@ -457,7 +460,9 @@
         ls (if (= :pair last-t)
              (pair->clojure-seq l)
              [l])]
-    (<-pairs (concat but-last ls))))
+    (->> (concat but-last ls)
+         (map make-quoted-pair)
+         <-pairs)))
 
 (defn assert-lit [[_ lit :as form]]
   (assert (= bel-lit lit) "expected lit expression")
@@ -477,11 +482,12 @@
     (eval-mac env (lit-v lit) args-head)
     (throw (Exception. "err unsupported fn call"))))
 
-(defn eval-apply [env [_ f apply-head]]
-  (eval-lit
+(defn eval-apply [env [_ f apply-head :as form]]
+  (bel-eval
    env
-   (assert-lit (bel-eval env f))
-   (apply-head->args-head (eval-pairs env apply-head))))
+   (make-pair
+    f
+    (apply-head->args-head (eval-pairs env apply-head)))))
 
 (defn eval-pair [env [_ l r :as x]]
   (cond
@@ -553,12 +559,35 @@
       (= t :pair) (eval-pair env form)
       (= t :backquote) (eval-backquote env form))))
 
+;; ---
+;; Run
+
+(defn ensure-seq [x]
+  (seq? x)
+  [x])
+
+(defn bel->clj [[t a b :as form]]
+  (condp = t
+    :symbol (symbol a)
+    :char (symbol a)
+    :pair
+    (concat (ensure-seq (bel->clj a))
+            (ensure-seq (bel->clj b)))
+    form))
+
+(defn run-all
+  ([ss] (run-all (make-bel-globe) ss))
+  ([globe ss]
+   (let [vs (->> ss
+                 (map (fn [s] (bel-eval {:globe globe :scope bel-nil} (bel-parse s))))
+                 doall)]
+     {:globe globe
+      :vs (map bel->clj vs)})))
+
 (defn run [& ss]
-  (let [globe (make-bel-globe)]
-    (->> ss
-         (map (fn [s] (bel-eval {:globe globe :scope bel-nil} (bel-parse s))))
-         doall
-         last)))
+  (->> (run-all ss)
+       :vs
+       last))
 
 (comment
   (run "nil")
@@ -604,8 +633,30 @@
         (fn [s] (not= s "===BREAK===")))))
 
 (comment
-  (map bel-parse (readable-source))
-  (time (apply run (readable-source))))
+  (def globe (:globe (run-all (readable-source))))
+  (:vs
+   (run-all
+    globe
+    ["(no nil)"
+     "(atom \\a)"
+     "(atom '(a))"
+     "(all atom '(a b))"
+     "(all atom '(a (b c) d))"
+     "(some atom '((a b) (c d)))"
+     "(some atom '((a b) c (d e)))"
+     "(reduce join '(a b c))"
+     "(cons 'a 'b 'c '(d e f))"
+     "(append '(a b c) '(d e f))"
+     "(append '(a) nil '(b c) '(d e f))"
+     "(snoc '(a b c) 'd 'e)"
+     "(list 'a 'b)"
+     "(map car '((a b) (c d) (e f)))"
+     "(map cons '(a b c) '(d e f))"
+     "(symbol 'a)"
+     "(let (x . y) '(a b c) y)"
+     "((macro (v) `(set ,v 'a)) x)"
+     "x"
+     "(apply or '(nil a nil b))"])))
 
 ; next up
 ; start by making dyn. Then move on to ccc, then err
