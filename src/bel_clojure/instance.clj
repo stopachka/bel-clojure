@@ -656,7 +656,13 @@
      "(let (x . y) '(a b c) y)"
      "((macro (v) `(set ,v 'a)) x)"
      "x"
-     "(apply or '(nil a nil b))"])))
+     "(apply or '(nil a nil b))"
+     "(proper '(a . b))"
+     "(proper '(a b))"
+     "(string \"foo\")"
+     "(mem \\a \"foobar\")"
+     "(let (x (o (y . z) '(a . b))) '(f) (list x y z))"
+     "(begins '(a b c d e) '(a b))"])))
 
 ; next up
 ; start by making dyn. Then move on to ccc, then err
