@@ -103,3 +103,54 @@
   [x]
   (println "[DEBUG] " (r/bel->pretty-clj x)))
 
+;; -----
+;; Types
+
+(defn pair-proper? [[p-t :as p]]
+  (or (= m/bel-nil p)
+      (and (= p-t :pair)
+           (pair-proper? (p-cdr p)))))
+
+(defn pair-find [f p]
+  (loop [p p]
+    (cond
+      (= m/bel-nil p) p
+      (f (p-car p)) (p-car p)
+      :else (recur (p-cdr p)))))
+
+(defn pair-map [f p]
+  (if (= m/bel-nil p) m/bel-nil
+      (m/make-pair
+       (f (p-car p))
+       (pair-map f (p-cdr p)))))
+
+(defn pair-append [a b]
+  (cond
+    (= m/bel-nil a) b
+    (= m/bel-nil (p-cdr a)) (m/make-pair (p-car a) b)
+    :else
+    (m/make-pair
+     (p-car a)
+     (pair-append (p-cdr a) b))))
+
+(defn pair-every? [f p]
+  (if (= m/bel-nil p) true
+      (and (f (p-car p))
+           (pair-every? f (p-cdr p)))))
+
+(defn bel-string? [a]
+  (and (pair-proper? a)
+       (pair-every? (fn [[t]] (= t :char)) a)))
+
+(defn bel-variable? [[var-t :as var-head]]
+  (or
+   (= var-t :symbol)
+   (and (= var-t :pair)
+        (= (p-id (p-car var-head) m/bel-vmark) m/bel-t))))
+
+(defn bel-optional? [[_ h]]
+  (= m/bel-o h))
+
+(defn bel-optional-var [[_ _h [_ variable]]] variable)
+
+(defn bel-optional-arg [[_ _h [_ _variable r]]] (p-car r))

@@ -10,7 +10,6 @@
 ;; Constants
 ;; ---------
 
-
 (def bel-quote [:symbol "quote"])
 (def bel-nil [:symbol "nil"])
 (def bel-t [:symbol "t"])
@@ -30,11 +29,11 @@
 ;; Pair
 ;; ----
 
-(defn make-quoted-pair [a]
-  (make-pair bel-quote a))
-
 (defn make-pair [a b]
   (ArrayList. [:pair a b]))
+
+(defn make-quoted-pair [a]
+  (make-pair bel-quote a))
 
 (declare p-car)
 (declare p-cdr)
@@ -546,9 +545,6 @@
     :scope (bel-parse "((parms . (a)) (body . (inc id a)))")}
    (bel-parse "`(',parms ',(car body))")))
 
-(defn bel-string? [a]
-  (and (pair-proper? a)
-       (pair-every? (fn [[t]] (= t :char)) a)))
 
 (defn bel-eval [{:keys [globe] :as env} form]
   (let [vmark (find-vmark globe)
@@ -583,6 +579,7 @@
       (= bel-nil r) r
       (= bel-nil (p-cdr r)) (bel-eval env (p-car r))
       :else (eval-if env r))))
+
 (defn stack-eval-set-2 [es rs vmark {:keys [globe]} [_ sym]]
   (let [v (last rs)
         rs' (vec (drop-last rs))

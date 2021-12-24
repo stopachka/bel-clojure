@@ -96,7 +96,8 @@
       `(list 'lit 'clo scope ',parms ',(car body))
       `(list 'lit 'clo scope ',parms '(do ,@body))))
 
-(set vmark (join))
+; /stopa-edit I am moving vmark up to the instance interpreter (set vmark (join))
+; this makes things faster
 
 (def uvar ()
   (list vmark))

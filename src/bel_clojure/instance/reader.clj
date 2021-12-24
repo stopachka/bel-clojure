@@ -84,7 +84,7 @@
 (defn bel->pretty-clj [[t a b :as form]]
   (condp = t
     :symbol (symbol a)
-    :char (symbol a)
+    :char (symbol (str "\\" a))
     :pair
     (concat (ensure-seq (bel->pretty-clj a))
             (ensure-seq (bel->pretty-clj b)))

@@ -2,6 +2,19 @@
   (:import
    (java.util ArrayList)))
 
+;; ----
+;; Misc
+
+(defn first-and-only [xs msg]
+  (assert (= (count xs) 1) msg)
+  (first xs))
+
+;; ---------
+;; Pair Cons
+
+(defn make-pair [a b]
+  (ArrayList. [:pair a b]))
+
 ;; Constants
 ;; ---------
 
@@ -20,19 +33,10 @@
 (def bel-scope [:symbol "scope"])
 (def bel-if [:symbol "if"])
 (def bel-vmark-sym [:symbol "vmark"])
+(defonce bel-vmark (make-pair bel-nil bel-nil))
 
+;; Pair Helpers
 ;; ----
-;; Misc
-
-(defn first-and-only [xs msg]
-  (assert (= (count xs) 1) msg)
-  (first xs))
-
-;; Pair
-;; ----
-
-(defn make-pair [a b]
-  (ArrayList. [:pair a b]))
 
 (defn make-quoted-pair [a]
   (make-pair bel-quote a))
@@ -48,9 +52,6 @@
          (first-and-only after-n "dotted list _must_ have 1 exp after the dot")
          (<-pairs after-x))))))
 
-(declare p-car)
-(declare p-cdr)
-
 (defn pair->clojure-seq [[_t l [r-t :as r] :as form]]
   (if (= bel-nil form)
     ()
@@ -60,36 +61,4 @@
        (= :pair r-t) (pair->clojure-seq r)
        (= bel-nil r) []
        :else [r]))))
-
-(defn pair-find [f p]
-  (loop [p p]
-    (cond
-      (= bel-nil p) p
-      (f (p-car p)) (p-car p)
-      :else (recur (p-cdr p)))))
-
-(defn pair-map [f p]
-  (if (= bel-nil p) bel-nil
-      (make-pair
-       (f (p-car p))
-       (pair-map f (p-cdr p)))))
-
-(defn pair-append [a b]
-  (cond
-    (= bel-nil a) b
-    (= bel-nil (p-cdr a)) (make-pair (p-car a) b)
-    :else
-    (make-pair
-     (p-car a)
-     (pair-append (p-cdr a) b))))
-
-(defn pair-proper? [[p-t :as p]]
-  (or (= bel-nil p)
-      (and (= p-t :pair)
-           (pair-proper? (p-cdr p)))))
-
-(defn pair-every? [f p]
-  (if (= bel-nil p) true
-      (and (f (p-car p))
-           (pair-every? f (p-cdr p)))))
 
