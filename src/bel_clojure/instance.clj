@@ -10,6 +10,7 @@
 ;; Constants
 ;; ---------
 
+
 (def bel-quote [:symbol "quote"])
 (def bel-nil [:symbol "nil"])
 (def bel-t [:symbol "t"])
@@ -560,8 +561,28 @@
       (= t :backquote) (eval-backquote env form))))
 
 
-;;
+;
 
+
+(defn stack-eval-if-2 [es rs vmark env [_ consequent-form r]]
+  (let [evaled-test (last rs)
+        rs' (vec (drop-last rs))]
+
+    (if (not= bel-nil))));
+
+
+(defn stack-eval-if [es rs vmark env [_ test-form [_ consequent-form r]]]
+  [(conj es
+         [env :if-2 consequent-form r]
+         [env test-form])
+   rs]
+  (if (not= (bel-eval env test-form)
+            bel-nil)
+    (bel-eval env consequent-form)
+    (cond
+      (= bel-nil r) r
+      (= bel-nil (p-cdr r)) (bel-eval env (p-car r))
+      :else (eval-if env r))))
 (defn stack-eval-set-2 [es rs vmark {:keys [globe]} [_ sym]]
   (let [v (last rs)
         rs' (vec (drop-last rs))
