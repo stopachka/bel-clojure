@@ -7,7 +7,6 @@
 ;; Misc
 ;; -------------
 
-
 (def drop-lastv (comp vec drop-last))
 
 ;; Env
@@ -191,7 +190,7 @@
 ;; ------------
 ;; bel-eval-mac
 
-(defn bel-eval-mac-2 [es rs env form]
+(defn bel-eval-mac-2 [es rs env _form]
   (let [code (last rs)
         rest-rs (drop-lastv rs)]
     [(conj es [env code])
@@ -221,7 +220,6 @@
 
 ;; --------------
 ;; bel-eval-pairs
-
 
 (defn bel-eval-pairs-2 [es rs _env [_ rs-cnt]]
   (let [rest-rs (vec (take rs-cnt rs))
@@ -266,6 +264,48 @@
     (= m/bel-if l) (bel-eval-if-1 es rs env r)
     :else (bel-eval-application-1 es rs env form)))
 
+;; bel-eval-backquote
+;; -------------
+;; eval-backquoted-form skips past our stack, and relies on recursion
+;; instead.
+;; This will be a pretty annoying function to unwrap the stack for.
+;; Instead, let's just hope that there's so few uses of backquotes
+;; That this won't cause a stackoverflow
+
+(declare bel-eval-single)
+(defn eval-backquoted-form [env [t [h-t :as h] r :as form]]
+  (cond
+    (= t :comma) (bel-eval-single env (second form))
+
+    (not= t :pair) form
+
+    (= :quote h-t) (m/make-pair
+                    (m/make-quoted-pair
+                     (eval-backquoted-form env (second h)))
+                    (eval-backquoted-form env r))
+
+    (= h-t :comma) (m/make-pair
+                    (bel-eval-single env (second h))
+                    (eval-backquoted-form env r))
+
+    (= h-t :splice) (p/pair-append
+                     (bel-eval-single env (second h))
+                     (eval-backquoted-form env r))
+
+    (= h-t :pair) (m/make-pair
+                   (eval-backquoted-form env h)
+                   (eval-backquoted-form env r))
+
+    :else (m/make-pair h (eval-backquoted-form env r))))
+
+(defn bel-eval-backquote [es rs env [_ r]]
+  [es
+   (conj rs
+         (eval-backquoted-form env r))])
+
+;; bel-eval
+;; -------------
+
 (defn bel-eval-step [es rs]
   (let [top (last es)
         rest-es (drop-lastv es)
@@ -302,7 +342,10 @@
       (bel-eval-lit-1 rest-es rs env form)
 
       (= t :eval-mac-2)
-      (bel-eval-mac-2 rest-es rs env form))))
+      (bel-eval-mac-2 rest-es rs env form)
+
+      (= t :backquote)
+      (bel-eval-backquote rest-es rs env form))))
 
 ;; bel-eval
 ;; --------
@@ -317,20 +360,21 @@
 (defn bel-eval [eval-stack return-stack]
   (loop [es eval-stack
          rs return-stack]
-    (debug-loop es rs)
+    #_(debug-loop es rs)
     (if (empty? es)
       (last rs)
       (let [[new-es new-rs] (bel-eval-step es rs)]
         (recur new-es new-rs)))))
+
+(defn bel-eval-single [env form]
+  (bel-eval [[env form]] []))
 
 (defn run [& ss]
   (let [env {:globe (make-bel-globe) :scope m/bel-nil}]
     (->> ss
          (map (fn [s]
                 (r/bel->pretty-clj
-                 (bel-eval
-                  [[env (r/bel-parse s)]]
-                  []))))
+                 (bel-eval-single env (r/bel-parse s)))))
          last)))
 
 (comment
@@ -354,6 +398,8 @@
   (run "((lit clo nil (x) (id x t)) nil)")
   (run
     ;; see source.bel
-    "(set def (lit mac (lit clo nil (n p e) (join 'set (join n (join (join 'lit (join 'clo (join nil (join p (join e nil))))) nil))))))"
+   "(set def (lit mac (lit clo nil (n p e) (join 'set (join n (join (join 'lit (join 'clo (join nil (join p (join e nil))))) nil))))))"
    "(def no (x) (id x nil))"
-   "(no nil)"))
+   "(no nil)")
+  (run "(set a 'foo b '(bar baz))"
+       "`(foo ',a ,@b)"))
