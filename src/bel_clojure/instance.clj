@@ -717,7 +717,6 @@
        (remove cstring/blank?)
        (take-while
         (fn [s] (not= s "===BREAK===")))))
-
 (comment
   (def globe (:globe (run-all (readable-source))))
   (:vs
