@@ -244,8 +244,6 @@
 (def is (x)
   [= _ x])
 
-===BREAK===
-
 (mac eif (var (o expr) (o fail) (o ok))
   (with (v (uvar)
          w (uvar)
@@ -874,11 +872,26 @@
       (buildnum (sr/ r d)
                 (sr/ (srinv i) d)))))
 
+; stopa-edit
+; hack to punt number-parser from our interpreter
+; since PG only has a few numbers in his source,
+; we can just define them.
+; When a user enters a number, it'll use PG's
+; interpreter, so we won't have to figure that out
+
+(set 0 (lit num (+ () (t)) (+ () (t))))
+
+(set 1 (lit num (+ (t) (t)) (+ () (t))))
+
+; /stopa-edit
+
 (def + ns
   (foldr (fn (x y)
            (apply buildnum ((of c+ cddr) x y)))
          0
          ns))
+
+===BREAK===
 
 (def - ns
   (if (no ns)       0

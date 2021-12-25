@@ -499,6 +499,10 @@
   (let [top (last es)
         rest-es (drop-lastv es)
         [env [t :as form]] top]
+    #_(println
+      "form:"
+      (r/bel->pretty-clj
+        form))
     (cond
       (= t :char)
       [rest-es (conj rs form)]
@@ -588,7 +592,8 @@
 (defn bel-eval [eval-stack return-stack]
   (loop [es eval-stack
          rs return-stack]
-    (debug-loop es rs)
+    #_(println "stack-size:" (count es))
+    #_(debug-loop es rs)
     (if (empty? es)
       (last rs)
       (let [[new-es new-rs] (bel-eval-step es rs)]

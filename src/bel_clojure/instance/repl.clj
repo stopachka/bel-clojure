@@ -24,6 +24,7 @@
 (comment
   (def env {:globe (e/make-bel-globe) :scope m/bel-nil})
   (e/run-all env (readable-source))
+  (e/run-all env ["(litnum ((of c+ cddr) 1 1))"])
   (e/run-all env
              ["(no nil)"
               "(atom \\a)"
