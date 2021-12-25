@@ -1,6 +1,8 @@
-sexp = string | list | abbrev_fn |  quote | backquote | comma | splice | char | symbol | dot
+sexp = string | list | abbrev_fn | comp |  quote | backquote | comma | splice | char | symbol | dot
 list = lparen sexp? (<whitespace> sexp)* rparen
 abbrev_fn = <'['> sexp? (<whitespace> sexp)* <']'>
+comp = (symbol | no_comp) (<':'> symbol | no_comp)*
+no_comp = <'~'> symbol
 <lparen> = <'('>
 <rparen> = <')'>
 string = <'"'> any_char* <'"'>
@@ -11,6 +13,7 @@ quote = <'\''> sexp
 backquote = <'`'> sexp
 comma = <','> sexp
 splice = <',@'> sexp
-name = #'[a-zA-Z!\-*+_=>]+'
+name = #'[a-zA-Z0-9!\-*+_=>\/<\^]+'
 any_char = #'.'
 whitespace = #'\s+'
+

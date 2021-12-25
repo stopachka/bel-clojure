@@ -46,6 +46,24 @@
                        (m/<-pairs xs)
                        m/bel-nil))))))
 
+(defn <-compose [xs]
+  (m/make-pair
+   [:symbol "compose"]
+   (m/<-pairs xs)))
+
+(def comp->pair
+  (form-transform :comp
+                  (fn [[_ & xs]]
+                    (<-compose
+                     (reduce
+                      (fn [ret [t r :as x]]
+                        (into ret
+                              (if (= t :no_comp)
+                                [[:symbol "no"] r]
+                                [x])))
+                      []
+                      xs)))))
+
 (def parse-string (-> "bel.ebnf" io/resource insta/parser))
 
 (def parse-postwalk
@@ -55,7 +73,8 @@
    quote->pair
    unwrap-name
    unwrap-sexp
-   abbrev-fn->pair))
+   abbrev-fn->pair
+   comp->pair))
 
 (def bel-parse
   (comp (partial walk/postwalk parse-postwalk) parse-string))
@@ -72,10 +91,20 @@
   (bel-parse "`(foo ,a ,@b)")
   (bel-parse "=")
   (bel-parse ">=")
-  (bel-parse "[id _ (car args)]"))
+  (bel-parse "[id _ (car args)]")
+  (bel-parse "e1")
+  (bel-parse "car:cdr")
+  (bel-parse "car:cdr:cdr")
+  (bel-parse "~f")
+  (bel-parse "~f:car")
+  (bel-parse "car:i/")
+  (bel-parse "i*")
+  (bel-parse "i<")
+  (bel-parse "i^"))
 
 ;; ------
 ;; bel->pretty-clj
+
 
 (defn ensure-seq [x]
   (seq? x)
