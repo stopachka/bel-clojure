@@ -217,7 +217,6 @@
   (let [evaled-args (last rs)
         rest-rs (drop-lastv rs)
         args (m/pair->clojure-seq evaled-args)]
-    (println "args", args)
     [es
      (conj rest-rs
            (apply simple-f
