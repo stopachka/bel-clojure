@@ -1660,7 +1660,8 @@ can be followed by an expression, and if no value is supplied for the
 parameter in the call, it gets the value of that expression instead
 (or nil if there isn't one). So
 
-> ((fn (x (o y)) y) 'a)
+> 
+((fn (x (o y)) y) 'a)
 nil
 > ((fn (x (o y 'b)) y) 'a)
 b

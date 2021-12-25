@@ -49,8 +49,5 @@
               "(proper '(a b))"
               "(string \"foo\")"
               "(mem \\a \"foobar\")"
-              ;; todo: assign-vars
               "(let (x (o (y . z) '(a . b))) '(f) (list x y z))"
-              "(begins '(a b c d e) '(a b))"
-              ]
-             ))
+              "(begins '(a b c d e) '(a b))"]))

@@ -149,42 +149,66 @@
 ;; -------------
 ;; bel-eval-clo
 
-(defn assign-vars [{:keys [scope] :as env} var-head arg-head]
-  (letfn [(f [scope var-head arg-head]
-            (cond
-              (every? (partial = m/bel-nil) [var-head arg-head])
-              scope
+(defn bel-assign-vars-optional-arg [es rs env [_ scope var-head]]
+  (let [arg-evaled (last rs)
+        rest-rs (drop-lastv rs)]
+    [(conj es
+           [env [:assign-vars-1 scope var-head arg-evaled]])
+     rest-rs]))
 
-              (p/bel-variable? var-head)
+(defn bel-assign-vars-rest [es rs env [_ var-head arg-head]]
+  (let [scope (last rs)
+        rest-rs (drop-lastv rs)]
+    [(conj es
+           [env [:assign-vars-1 scope var-head arg-head]])
+     rest-rs]))
+
+(defn bel-assign-vars-1 [es rs env [_ scope var-head arg-head]]
+  (cond
+    (every? (partial = m/bel-nil) [var-head arg-head])
+    [es (conj rs scope)]
+
+    (p/bel-variable? var-head)
+    [es (conj rs
               (m/make-pair (make-env-pair
                             var-head
                             arg-head)
-                           scope)
+                           scope))]
 
-              (p/bel-optional? var-head)
-              (f scope
-                 (p/bel-optional-var var-head)
-                 (if (= m/bel-nil arg-head)
-                   (get-variable env (p/bel-optional-arg var-head))
-                   arg-head))
+    (p/bel-optional? var-head)
+    (if (= m/bel-nil arg-head)
+      [(conj es
+             [env [:assign-vars-optional-arg scope (p/bel-optional-var var-head)]]
+             [env (p/bel-optional-arg var-head)])
 
-              :else
-              (let [s' (f scope
-                          (p/p-car var-head)
-                          (p/p-car arg-head))]
-                (f s' (p/p-cdr var-head) (p/p-cdr arg-head)))))]
-    (f scope var-head arg-head)))
+       rs]
 
-(defn bel-clo-ev [env litv args-head]
-  (let [[_ scope [_ args-sym-head [_ body-head]]] litv
-        new-scope (assign-vars (assoc env :scope scope)
-                               args-sym-head
-                               args-head)]
-    [(assoc env :scope new-scope)
-     body-head]))
+      [(conj es
+             [env [:assign-vars-1 scope (p/bel-optional-var var-head) arg-head]])
+       rs])
+
+    :else
+    [(conj es
+           [env [:assign-vars-rest (p/p-cdr var-head) (p/p-cdr arg-head)]]
+           [env [:assign-vars-1 scope (p/p-car var-head) (p/p-car arg-head)]])
+     rs]))
+
+(defn bel-eval-clo-2 [es rs env [_ body-head]]
+  (let [scope (last rs)
+        rest-rs (drop-lastv rs)]
+    (println "scope:" (r/bel->pretty-clj scope))
+    [(conj es
+           [(assoc env :scope scope) body-head])
+     rest-rs]))
+
+(defn bel-clo-es [env litv args-head]
+  (let [[_ scope [_ args-sym-head [_ body-head]]] litv]
+    [[env [:eval-clo-2 body-head]]
+     [env [:assign-vars-1 scope args-sym-head args-head]]]))
 
 (defn bel-eval-clo [es rs env litv args-head]
-  [(conj es (bel-clo-ev env litv args-head)) rs])
+  [(into es (bel-clo-es env litv args-head))
+   rs])
 
 ;; ------------
 ;; bel-eval-mac
@@ -197,9 +221,9 @@
 
 (defn bel-eval-mac-1 [es rs env litv args-head]
   (let [[_ [_ _ [_ _ clo]]] litv]
-    [(conj es
-           [env [:eval-mac-2]]
-           (bel-clo-ev env clo args-head))
+    [(into es
+           (concat [[env [:eval-mac-2]]]
+                   (bel-clo-es env clo args-head)))
      rs]))
 
 ;; ------------
@@ -341,10 +365,8 @@
     (= t :comma)
     [(conj es [env h])
      rs]
-
     (not= t :pair)
     [es (conj rs form)]
-
     (= h-t :comma)
     [(conj
       es
@@ -352,7 +374,6 @@
       [env (second h)]
       [env [:backquote r]])
      rs]
-
     (= h-t :splice)
     [(conj
       es
@@ -360,14 +381,12 @@
       [env (second h)]
       [env [:backquote r]])
      rs]
-
     (= h-t :pair)
     [(conj es
            [env [:eval-bq-pair-1]]
            [env [:backquote h]]
            [env [:backquote r]])
      rs]
-
     :else
     [(conj es
            [env [:eval-bq-rest-1 h]]
@@ -414,6 +433,18 @@
 
       (= t :eval-mac-2)
       (bel-eval-mac-2 rest-es rs env form)
+
+      (= t :assign-vars-1)
+      (bel-assign-vars-1 rest-es rs env form)
+
+      (= t :assign-vars-optional-arg)
+      (bel-assign-vars-optional-arg rest-es rs env form)
+
+      (= t :assign-vars-rest)
+      (bel-assign-vars-rest rest-es rs env form)
+
+      (= t :eval-clo-2)
+      (bel-eval-clo-2 rest-es rs env form)
 
       (= t :backquote)
       (bel-eval-backquote rest-es rs env form)
@@ -489,6 +520,8 @@
   (run "((lit clo nil (x) (id x t)) nil)")
   (run "(apply join '(a b))")
   (run "(apply join 'a '(b))")
+  (run "((lit clo nil (x (o y)) y) 'a)")
+  (run "((lit clo nil (x (o y 'b)) y) 'a)")
   (run
     ;; see source.bel
    "(set def (lit mac (lit clo nil (n p e) (join 'set (join n (join (join 'lit (join 'clo (join nil (join p (join e nil))))) nil))))))"
