@@ -1918,9 +1918,8 @@ Here's some simple code that makes a list:
 Now let's try replacing the 'b with an expression that saves the
 current continuation before returning b:
 
-> (list 'a (ccc (fn (c)
-                  (set cont c)
-                  'b)))
+> 
+(list 'a (ccc (fn (c) (set cont c) 'b)))
 (a b)
 
 It returns the same value, but in the process we've set cont to the

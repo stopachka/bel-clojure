@@ -32,7 +32,9 @@
 (def bel-globe [:symbol "globe"])
 (def bel-scope [:symbol "scope"])
 (def bel-if [:symbol "if"])
+(def bel-cont [:symbol "cont"])
 (def bel-vmark-sym [:symbol "vmark"])
+
 (defonce bel-vmark (make-pair bel-nil bel-nil))
 
 ;; Pair Helpers

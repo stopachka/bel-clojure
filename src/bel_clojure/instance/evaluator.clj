@@ -69,15 +69,43 @@
      rest-rs]))
 
 (defn p-dyn [es rs env variable arg after]
-  (println ":" variable arg after)
   [(conj
     es
     [env [:dyn-2 variable after]]
     [env arg])
    rs])
 
+;; p-ccc
+;; ----
+
+(defn bel-eval-cont [_es _rs _env litv args-head]
+  (let [[_ f] litv
+        [es rs] (f)]
+    [es (conj rs (p/p-car args-head))]))
+
+(defn bel-eval-ccc-2 [es rs env _form]
+  (let [f-evaled (last rs)
+        rest-rs (drop-lastv rs)]
+    [(conj
+      es
+      [env
+       (m/make-pair
+        f-evaled
+        (m/make-pair
+         (m/<-pairs [m/bel-lit m/bel-cont (fn [] [es rest-rs])])
+         m/bel-nil))])
+     rest-rs]))
+
+(defn p-ccc [es rs env f]
+  [(conj
+    es
+    [env [:ccc-2]]
+    [env f])
+   rs])
+
 ;; Env
 ;; -------------
+
 
 (def prim-name->fn
   {"id" #'p/p-id
@@ -93,7 +121,8 @@
    "p-debug" #'p/p-debug})
 
 (def special-prim-name->fn
-  {"dyn" #'p-dyn})
+  {"dyn" #'p-dyn
+   "ccc" #'p-ccc})
 
 (defn make-bel-globe []
   (->> (merge prim-name->fn special-prim-name->fn)
@@ -305,10 +334,13 @@
       m/bel-clo
       (bel-eval-clo es rest-rs env litv args-head)
       m/bel-mac
-      (bel-eval-mac-1 es rest-rs env litv args-head))))
+      (bel-eval-mac-1 es rest-rs env litv args-head)
+      m/bel-cont
+      (bel-eval-cont es rest-rs env litv args-head))))
 
 ;; --------------
 ;; bel-eval-many
+
 
 (defn bel-eval-many-2 [es rs _env [_ rs-cnt]]
   (let [rest-rs (vec (take rs-cnt rs))
@@ -523,6 +555,9 @@
       (= t :dyn-remove)
       (bel-eval-dyn-remove rest-es rs env form)
 
+      (= t :ccc-2)
+      (bel-eval-ccc-2 rest-es rs env form)
+
       (= t :backquote)
       (bel-eval-backquote rest-es rs env form)
 
@@ -632,5 +667,9 @@
   (run-all (make-env)
            ["(set x 'a)"
             "x"
-            "(dyn x 'z (join x 'b))" 
-            "x"]))
+            "(dyn x 'z (join x 'b))"
+            "x"])
+  (run-all (make-env)
+           ["(join 'a (ccc (lit clo nil (c) (set cont c))))"
+            "(cont 'b)"
+            "(cont 'c)"]))
