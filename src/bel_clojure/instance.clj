@@ -395,7 +395,7 @@
                 (f scope
                    (bel-optional-var var-head)
                    (if (= bel-nil arg-head)
-                     (bel-eval env (bel-optional-arg var-head))
+                     (bel-optional-arg var-head)
                      arg-head))
 
                 :else

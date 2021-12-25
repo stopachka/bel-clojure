@@ -119,9 +119,10 @@
 (defn lit-v [[_ _lit [_ _t v]]] v)
 
 (defn assert-lit [[_ lit :as form]]
-  (assert (= m/bel-lit lit) "expected lit expression")
+  (assert (= m/bel-lit lit)
+          (format
+           "expected lit expression got form = %s" form))
   form)
-
 
 ;; -------------
 ;; bel-eval-prim
@@ -145,10 +146,8 @@
 (defn bel-eval-prim [es rs litv args-head]
   [es (conj rs (run-prim litv args-head))])
 
-
 ;; -------------
 ;; bel-eval-clo
-
 
 (defn assign-vars [{:keys [scope] :as env} var-head arg-head]
   (letfn [(f [scope var-head arg-head]
@@ -253,7 +252,36 @@
          [env f])
    rs])
 
-;; bel-eval-pair
+;; bel-eval-apply
+;; -------------
+
+(defn apply-head->args-head [x]
+  (let [xs (m/pair->clojure-seq x)
+        but-last (drop-last xs)
+        [last-t :as l] (last xs)
+        ls (if (= :pair last-t)
+             (m/pair->clojure-seq l)
+             [l])]
+    (->> (concat but-last ls)
+         (map m/make-quoted-pair)
+         m/<-pairs)))
+
+(defn bel-eval-apply-2 [es rs env [_ f]]
+  (let [evaled-apply-head (last rs)
+        rest-rs (drop-lastv rs)]
+    [(conj
+      es
+      [env (m/make-pair
+            f (apply-head->args-head evaled-apply-head))])
+     rest-rs]))
+
+(defn bel-eval-apply-1 [es rs env [_ f apply-head :as _form]]
+  [(conj
+    es
+    [env [:eval-apply-2 f]]
+    [env [:eval-many-1 apply-head]])
+   rs])
+
 ;; -------------
 
 (defn bel-eval-pair [es rs env [_ l r :as form]]
@@ -262,36 +290,11 @@
     (= m/bel-lit l) [es (conj rs form)]
     (= m/bel-set l) (bel-eval-set-1 es rs env r)
     (= m/bel-if l) (bel-eval-if-1 es rs env r)
+    (= m/bel-apply l) (bel-eval-apply-1 es rs env r)
     :else (bel-eval-application-1 es rs env form)))
 
 ;; bel-eval-backquote
 ;; -------------
-
-(declare bel-eval-single)
-(defn eval-backquoted-form [env [t [h-t :as h] r :as form]]
-  (cond
-    (= t :comma) (bel-eval-single env (second form))
-
-    (not= t :pair) form
-
-    (= h-t :comma) (m/make-pair
-                    (bel-eval-single env (second h))
-                    (eval-backquoted-form env r))
-
-    (= h-t :splice) (p/pair-append
-                     (bel-eval-single env (second h))
-                     (eval-backquoted-form env r))
-
-    (= h-t :pair) (m/make-pair
-                   (eval-backquoted-form env h)
-                   (eval-backquoted-form env r))
-
-    :else (m/make-pair h (eval-backquoted-form env r))))
-
-(defn bel-eval-backquote-old [es rs env [_ r]]
-  [es
-   (conj rs
-         (eval-backquoted-form env r))])
 
 (defn bel-eval-bq-comma-1 [es rs _env _form]
   (let [[r-evaled h-evaled] (take-last 2 rs)
@@ -374,7 +377,6 @@
 ;; bel-eval
 ;; -------------
 
-
 (defn bel-eval-step [es rs]
   (let [top (last es)
         rest-es (drop-lastv es)
@@ -426,7 +428,10 @@
       (bel-eval-bq-pair-1 rest-es rs env form)
 
       (= t :eval-bq-rest-1)
-      (bel-eval-bq-rest-1 rest-es rs env form))))
+      (bel-eval-bq-rest-1 rest-es rs env form)
+
+      (= t :eval-apply-2)
+      (bel-eval-apply-2 rest-es rs env form))))
 
 ;; bel-eval
 ;; --------
@@ -441,7 +446,7 @@
 (defn bel-eval [eval-stack return-stack]
   (loop [es eval-stack
          rs return-stack]
-    (debug-loop es rs)
+    #_(debug-loop es rs)
     (if (empty? es)
       (last rs)
       (let [[new-es new-rs] (bel-eval-step es rs)]
@@ -450,14 +455,19 @@
 (defn bel-eval-single [env form]
   (bel-eval [[env form]] []))
 
+(defn run-all
+  [env ss]
+  (mapv (fn [s]
+          (println "run:" s)
+          (r/bel->pretty-clj
+           (bel-eval-single env (r/bel-parse s))))
+        ss))
+
 (defn run [& ss]
-  (let [env {:globe (make-bel-globe) :scope m/bel-nil}]
-    (->> ss
-         (map (fn [s]
-                (r/bel->pretty-clj
-                 (bel-eval-single env (r/bel-parse s)))))
-         last)))
-(r/bel-parse "`,@foo")
+  (last (run-all
+         {:globe (make-bel-globe) :scope m/bel-nil}
+         ss)))
+
 (comment
   (run "nil")
   (run "\\bel")
@@ -477,6 +487,8 @@
   (run "(id)")
   (run "((lit clo nil (x) (id x t)) t)")
   (run "((lit clo nil (x) (id x t)) nil)")
+  (run "(apply join '(a b))")
+  (run "(apply join 'a '(b))")
   (run
     ;; see source.bel
    "(set def (lit mac (lit clo nil (n p e) (join 'set (join n (join (join 'lit (join 'clo (join nil (join p (join e nil))))) nil))))))"
