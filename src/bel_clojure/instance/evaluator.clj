@@ -9,6 +9,73 @@
 
 (def drop-lastv (comp vec drop-last))
 
+;; variable
+;; ---------
+
+(defn remove-variable! [var-pair-head sym-to-remove]
+  (cond
+    (= m/bel-nil var-pair-head)
+    m/bel-nil
+
+    (= (p/p-car (p/p-car var-pair-head)) sym-to-remove)
+    (do
+      (p/p-xar var-pair-head
+               (p/p-car (p/p-cdr var-pair-head)))
+      (p/p-xdr var-pair-head
+               (p/p-cdr (p/p-cdr var-pair-head))))
+    :else
+    (remove-variable! (p/p-cdr var-pair-head) sym-to-remove)))
+
+(defn make-env-pair [sym v]
+  (assert (p/bel-variable? sym)
+          (format "expected left-side to be a variable= %s" sym))
+  (m/make-pair sym v))
+
+(defn find-env-pair [to-find pairs]
+  (let [v (some->> pairs
+                   (p/pair-find
+                    (fn [p] (= m/bel-t (p/p-id to-find (p/p-car p))))))]
+    (when (not= v m/bel-nil) v)))
+
+(defn get-variable [{:keys [dyn scope globe]} form]
+  (cond
+    (#{m/bel-nil m/bel-t m/bel-o m/bel-apply} form) form
+    (= m/bel-globe form) globe
+    (= m/bel-scope form) scope
+    (= m/bel-vmark-sym form) m/bel-vmark
+    :else
+    (let [v (->> [dyn scope globe]
+                 (some (partial find-env-pair form)))]
+      (assert v (format "expected value for variable = %s" form))
+      (p/p-cdr v))))
+
+;; dyn
+;; ----
+
+(defn bel-eval-dyn-remove [es rs {:keys [dyn]} [_ variable]]
+  (remove-variable! dyn variable)
+  [es rs])
+
+(defn bel-eval-dyn-2 [es rs env [_ variable after]]
+  (let [ev (last rs)
+        rest-rs (drop-lastv rs)
+        {:keys [dyn]} env
+        [_ head tail] dyn]
+    (p/p-xar dyn (make-env-pair variable ev))
+    (p/p-xdr dyn (m/make-pair head tail))
+    [(conj es
+           [env [:dyn-remove variable]]
+           [env after])
+     rest-rs]))
+
+(defn p-dyn [es rs env variable arg after]
+  (println ":" variable arg after)
+  [(conj
+    es
+    [env [:dyn-2 variable after]]
+    [env arg])
+   rs])
+
 ;; Env
 ;; -------------
 
@@ -25,42 +92,21 @@
    "coin" #'p/p-coin
    "p-debug" #'p/p-debug})
 
+(def special-prim-name->fn
+  {"dyn" #'p-dyn})
+
 (defn make-bel-globe []
-  (->> prim-name->fn
+  (->> (merge prim-name->fn special-prim-name->fn)
        (map (fn [[k]]
               (m/make-pair
                [:symbol k]
                (m/<-pairs [m/bel-lit m/bel-prim [:symbol k]]))))
        m/<-pairs))
 
-;; variable
-;; ---------
-
-(defn make-env-pair [sym v]
-  (assert (p/bel-variable? sym)
-          (format "expected left-side to be a variable= %s" sym))
-  (m/make-pair sym v))
-
-(defn find-env-pair [to-find pairs]
-  (let [v (some->> pairs
-                   (p/pair-find
-                    (fn [p] (= m/bel-t (p/p-id to-find (p/p-car p))))))]
-    (when (not= v m/bel-nil) v)))
-
-(defn get-variable [{:keys [scope globe]} form]
-  (cond
-    (#{m/bel-nil m/bel-t m/bel-o m/bel-apply} form) form
-    (= m/bel-globe form) globe
-    (= m/bel-scope form) scope
-    (= m/bel-vmark-sym form) m/bel-vmark
-    :else
-    (let [v (->> [scope globe]
-                 (some (partial find-env-pair form)))]
-      (assert v (format "expected value for variable = %s" form))
-      (p/p-cdr v))))
 
 ;; ------------
 ;; bel-eval-if
+
 
 (defn bel-eval-if-2 [es rs env [_ [_ consequent-form r]]]
   (let [evaled-test-form (last rs)
@@ -127,24 +173,41 @@
 ;; -------------
 ;; bel-eval-prim
 
-
-(defn run-prim [litv args-head]
-  (let [[_ [_ n]] litv
-        f (prim-name->fn n)
-        args (m/pair->clojure-seq args-head)
-        niled-args (->> f
+(defn bel-nil-args [f args]
+  (let [niled-args (->> f
                         meta
                         :arglists
                         first
-                        (map-indexed (fn [i _] (nth args i m/bel-nil))))
-        _ (assert (<= (count args) (count niled-args))
-                  (format
-                   "too many args = %s niled-args = %s niled-args" args niled-args))]
+                        (map-indexed (fn [i _] (nth args i m/bel-nil))))]
+    (assert (<= (count args) (count niled-args))
+            (format
+             "too many args = %s niled-args = %s niled-args" args niled-args))
+    niled-args))
 
-    (apply f niled-args)))
+(defn bel-eval-prim-simple [es rs _env [_ simple-f]]
+  (let [evaled-args (last rs)
+        rest-rs (drop-lastv rs)
+        args (m/pair->clojure-seq evaled-args)]
+    (println "args", args)
+    [es
+     (conj rest-rs
+           (apply simple-f
+                  (bel-nil-args simple-f args)))]))
 
-(defn bel-eval-prim [es rs litv args-head]
-  [es (conj rs (run-prim litv args-head))])
+(defn bel-eval-prim [es rs env litv args-head]
+  (let [[_ [_ n]] litv
+        simple-f (prim-name->fn n)
+        special-f (special-prim-name->fn n)]
+    (if simple-f
+      [(conj es
+             [env [:eval-prim-simple simple-f]]
+             [env [:eval-many-1 args-head]])
+       rs]
+      (apply special-f
+             (bel-nil-args
+              special-f
+              (concat [es rs env]
+                      (m/pair->clojure-seq args-head)))))))
 
 ;; -------------
 ;; bel-eval-clo
@@ -178,25 +241,28 @@
     (p/bel-optional? var-head)
     (if (= m/bel-nil arg-head)
       [(conj es
-             [env [:assign-vars-optional-arg scope (p/bel-optional-var var-head)]]
+             [env [:assign-vars-optional-arg
+                   scope (p/bel-optional-var var-head)]]
              [env (p/bel-optional-arg var-head)])
 
        rs]
 
       [(conj es
-             [env [:assign-vars-1 scope (p/bel-optional-var var-head) arg-head]])
+             [env [:assign-vars-1
+                   scope (p/bel-optional-var var-head) arg-head]])
        rs])
 
     :else
     [(conj es
-           [env [:assign-vars-rest (p/p-cdr var-head) (p/p-cdr arg-head)]]
-           [env [:assign-vars-1 scope (p/p-car var-head) (p/p-car arg-head)]])
+           [env [:assign-vars-rest
+                 (p/p-cdr var-head) (p/p-cdr arg-head)]]
+           [env [:assign-vars-1
+                 scope (p/p-car var-head) (p/p-car arg-head)]])
      rs]))
 
 (defn bel-eval-clo-2 [es rs env [_ body-head]]
   (let [scope (last rs)
         rest-rs (drop-lastv rs)]
-    (println "scope:" (r/bel->pretty-clj scope))
     [(conj es
            [(assoc env :scope scope) body-head])
      rest-rs]))
@@ -235,7 +301,7 @@
         litv (lit-v evaled-lit)]
     (condp = (lit-type evaled-lit)
       m/bel-prim
-      (bel-eval-prim es rest-rs litv args-head)
+      (bel-eval-prim es rest-rs env litv args-head)
       m/bel-clo
       (bel-eval-clo es rest-rs env litv args-head)
       m/bel-mac
@@ -264,7 +330,8 @@
   (let [evaled-lit (assert-lit (last rs))
         rest-rs (drop-lastv rs)
         es' (conj es [env [:eval-lit-1 evaled-lit]])]
-    (if (= (lit-type evaled-lit) m/bel-mac)
+    (if (#{m/bel-mac m/bel-prim}
+         (lit-type evaled-lit))
       [es' (conj rest-rs args-head)]
       [(conj es'
              [env [:eval-many-1 args-head]])
@@ -307,6 +374,7 @@
    rs])
 
 ;; -------------
+;; bel-eval-pair
 
 (defn bel-eval-pair [es rs env [_ l r :as form]]
   (cond
@@ -431,6 +499,9 @@
       (= t :eval-lit-1)
       (bel-eval-lit-1 rest-es rs env form)
 
+      (= t :eval-prim-simple)
+      (bel-eval-prim-simple rest-es rs env form)
+
       (= t :eval-mac-2)
       (bel-eval-mac-2 rest-es rs env form)
 
@@ -445,6 +516,12 @@
 
       (= t :eval-clo-2)
       (bel-eval-clo-2 rest-es rs env form)
+
+      (= t :dyn-2)
+      (bel-eval-dyn-2 rest-es rs env form)
+
+      (= t :dyn-remove)
+      (bel-eval-dyn-remove rest-es rs env form)
 
       (= t :backquote)
       (bel-eval-backquote rest-es rs env form)
@@ -477,7 +554,7 @@
 (defn bel-eval [eval-stack return-stack]
   (loop [es eval-stack
          rs return-stack]
-    #_(debug-loop es rs)
+    (debug-loop es rs)
     (if (empty? es)
       (last rs)
       (let [[new-es new-rs] (bel-eval-step es rs)]
@@ -486,6 +563,13 @@
 (defn bel-eval-single [env form]
   (bel-eval [[env form]] []))
 
+(defn make-env
+  ([] (make-env (make-bel-globe)))
+  ([g]
+   {:globe g
+    :scope m/bel-nil
+    :dyn
+    (m/make-pair m/bel-nil m/bel-nil)}))
 (defn run-all
   [env ss]
   (mapv (fn [s]
@@ -495,9 +579,7 @@
         ss))
 
 (defn run [& ss]
-  (last (run-all
-         {:globe (make-bel-globe) :scope m/bel-nil}
-         ss)))
+  (last (run-all (make-env) ss)))
 
 (comment
   (run "nil")
@@ -546,4 +628,9 @@
 
   (quote (a (b (c (d (e (f nil)))))))
   (run "(set y '(c d))"
-       "`(a b ,@y e f)"))
+       "`(a b ,@y e f)")
+  (run-all (make-env)
+           ["(set x 'a)"
+            "x"
+            "(dyn x 'z (join x 'b))" 
+            "x"]))
