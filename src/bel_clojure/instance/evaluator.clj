@@ -580,15 +580,7 @@
         (bel-eval-bq-rest-1 rest-es rs env form)
 
         (= t :eval-apply-2)
-        (bel-eval-apply-2 rest-es rs env form))
-      (catch Exception e
-        (bel-eval-step
-         (conj
-          rest-es
-          [env
-           (m/make-pair m/bel-err-sym
-                        (m/make-pair (m/make-pair m/bel-lit e) m/bel-nil))])
-         rs)))))
+        (bel-eval-apply-2 rest-es rs env form)))))
 
 ;; bel-eval
 ;; --------
