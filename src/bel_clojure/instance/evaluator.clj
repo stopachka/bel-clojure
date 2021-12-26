@@ -105,8 +105,8 @@
 ;; Env
 ;; -------------
 
-(defn p-err [es rs e]
-  [[] [:err e]])
+(defn p-err [es rs env e]
+  [[] [[:err e]]])
 
 (defn p-debug
   "Note, this is not necessary for
@@ -216,17 +216,26 @@
                         (map-indexed (fn [i _] (nth args i m/bel-nil))))]
     (assert (<= (count args) (count niled-args))
             (format
-             "too many args = %s niled-args = %s niled-args" args niled-args))
+             "too many args = %s (%s) niled-args = %s (%s) niled-args"
+             (vec args) (count args) (vec niled-args) (count niled-args)))
     niled-args))
 
-(defn bel-eval-prim-simple [es rs _env [_ simple-f]]
+(defn bel-eval-prim-simple [es rs env [_ simple-f]]
   (let [evaled-args (last rs)
         rest-rs (drop-lastv rs)
         args (m/pair->clojure-seq evaled-args)]
-    [es
-     (conj rest-rs
-           (apply simple-f
-                  (bel-nil-args simple-f args)))]))
+    (try
+      (let [res (apply simple-f
+                       (bel-nil-args simple-f args))]
+
+        [es
+         (conj rest-rs res)])
+      (catch Exception e
+        [(conj es [env (m/make-pair
+                        m/bel-err-sym
+                        (m/make-pair [:clj-err e]
+                                     m/bel-nil))])
+         rest-rs]))))
 
 (defn bel-eval-prim [es rs env litv args-head]
   (let [[_ [_ n]] litv
@@ -505,8 +514,10 @@
   (let [top (last es)
         rest-es (drop-lastv es)
         [env [t :as form]] top]
-    (try
-      (cond
+    (cond
+        (= t :clj-err)
+        [rest-es (conj rs form)]
+
         (= t :char)
         [rest-es (conj rs form)]
 
@@ -580,11 +591,10 @@
         (bel-eval-bq-rest-1 rest-es rs env form)
 
         (= t :eval-apply-2)
-        (bel-eval-apply-2 rest-es rs env form)))))
+        (bel-eval-apply-2 rest-es rs env form))))
 
 ;; bel-eval
 ;; --------
-
 
 (defn debug-loop [es rs]
   (println "in:")
@@ -596,7 +606,6 @@
 (defn bel-eval [eval-stack return-stack]
   (loop [es eval-stack
          rs return-stack]
-    #_(debug-loop es rs)
     (if (empty? es)
       (last rs)
       (let [[new-es new-rs] (bel-eval-step es rs)]

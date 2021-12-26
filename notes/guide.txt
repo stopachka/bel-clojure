@@ -1474,7 +1474,7 @@ it with let, which is a very simple macro upon fn.
 Since let expands into a fn, you have the full power of Bel parameter
 lists in the first argument.
 
-> 
+>
 (let (x . y) '(a b c)
     (list x y))
 (a (b c))
@@ -1660,7 +1660,7 @@ can be followed by an expression, and if no value is supplied for the
 parameter in the call, it gets the value of that expression instead
 (or nil if there isn't one). So
 
-> 
+>
 ((fn (x (o y)) y) 'a)
 nil
 > ((fn (x (o y 'b)) y) 'a)
@@ -1715,7 +1715,7 @@ like an ordinary if, except that it takes an initial variable, which
 in any then expression will be lexically bound to the value returned
 by the preceding test expression.
 
-> 
+>
 (iflet x nil 'foo '(a b c) (car x) 'bar)
 a
 
@@ -1912,7 +1912,7 @@ Here's some simple code that makes a list:
 Now let's try replacing the 'b with an expression that saves the
 current continuation before returning b:
 
-> 
+>
 (list 'a (ccc (fn (c) (set cont c) 'b)))
 (a b)
 
@@ -1953,9 +1953,7 @@ abort, we can take over what happens when an error is signalled.
 
 Here we rebind err to return hello when an error occurs:
 
-> (ccc (fn (c)
-         (dyn err (fn (x) (c 'hello))
-           (car 'b))))
+> (ccc (fn (c) (dyn err (fn (x) (c 'hello)) (car 'b))))
 hello
 
 This time the car expression does get evaluated, which causes an
@@ -2041,6 +2039,8 @@ does
 
 > ((isa 'clo) map)
 t
+
+===BREAK===
 
 The operators we've defined so far, together with the axioms, will
 now enable us to define a function that acts as a Bel interpreter: a

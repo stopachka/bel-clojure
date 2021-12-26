@@ -71,4 +71,11 @@
                               ["(join 'a (ccc (lit clo nil (c) (set cont c))))"
                                "(cont 'b)"
                                "(cont 'c)"]))
-         '((a . b) (a . c)))))
+         '((a . b) (a . c))))
+
+  (is (= (ev "(err \"something\")")
+         '(err "something")))
+  (is (= (first (ev "(car 'a)")) 'err))
+  (is (= (ev
+          "(dyn err (lit clo nil (x) 'hello) (car 'a))")
+         'hello)))

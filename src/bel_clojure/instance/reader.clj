@@ -91,7 +91,7 @@
     (= t :backquote) (list 'bq (bel->pretty-clj a))
     (= t :comma) (list 'cm (bel->pretty-clj a))
     (= t :splice) (list 'spl (bel->pretty-clj a))
-
+    (= t :err) (list 'err (bel->pretty-clj (second form)))
     (m/bel-string? form)
     (->> form
          m/pair->clojure-seq

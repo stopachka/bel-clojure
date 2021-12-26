@@ -74,16 +74,11 @@
   (is (= (ev "(udrop '(a b) '(c d e f g))") '(e f g)))
   (is (= (ev "(map idfn '(a b c))") '(a b c)))
   (is (= (ev "((is 'a) 'a)") 't))
-  (is (= (ev "(eif x (car 'a) 'oops x)") nil))
-  (is (= (ev "") nil))
-  (is (= (ev "") nil))
-  (is (= (ev "") nil))
-  (is (= (ev "") nil))
-  (is (= (ev "") nil))
-  (is (= (ev "") nil))
-  (is (= (ev "") nil))
-  (is (= (ev "") nil))
-  (is (= (ev "") nil)))
-
-
+  (is (= (ev "(eif x (car 'a) 'oops x)") 'oops))
+  (is (= (ev "(onerr 'oops (car 'a))") 'oops))
+  (is (= (ev "(safe (car 'a))") nil))
+  (is (= (ev "(safe (car '(a b)))") 'a))
+  (is (= (ev "(map literal (list nil \"foo\" car))") '((nil o apply) t t)))
+  (is (= (ev "(map variable (list 'x (uvar) t))") '(t t nil)))
+  (is (= (ev "((isa 'clo) map)") 't)))
 
