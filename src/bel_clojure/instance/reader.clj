@@ -3,7 +3,8 @@
    [clojure.java.io :as io]
    [instaparse.core :as insta]
    [clojure.walk :as walk]
-   [bel-clojure.instance.model :as m]))
+   [bel-clojure.instance.model :as m]
+   [clojure.string :as cstring]))
 
 (defn form-transform
   [k f]
@@ -79,43 +80,31 @@
 (def bel-parse
   (comp (partial walk/postwalk parse-postwalk) parse-string))
 
-(comment
-  (bel-parse "\"str\"")
-  (bel-parse "(a b c)")
-  (bel-parse "_")
-  (bel-parse "'+")
-  (bel-parse "\\bel")
-  (bel-parse "(a . b)")
-  (bel-parse "(a b . c)")
-  (bel-parse "()")
-  (bel-parse "`(foo ,a ,@b)")
-  (bel-parse "=")
-  (bel-parse ">=")
-  (bel-parse "[id _ (car args)]")
-  (bel-parse "e1")
-  (bel-parse "car:cdr")
-  (bel-parse "car:cdr:cdr")
-  (bel-parse "~f")
-  (bel-parse "~f:car")
-  (bel-parse "car:i/")
-  (bel-parse "i*")
-  (bel-parse "i<")
-  (bel-parse "i^"))
-
 ;; ------
 ;; bel->pretty-clj
 
-
-(defn ensure-seq [x]
-  (seq? x)
-  [x])
-
 (defn bel->pretty-clj [[t a b :as form]]
-  (condp = t
-    :symbol (symbol a)
-    :char (symbol (str "\\" a))
-    :pair
-    (concat (ensure-seq (bel->pretty-clj a))
-            (ensure-seq (bel->pretty-clj b)))
-    form))
+  (cond
+    (= m/bel-nil form) nil
+    (= t :symbol) (symbol a)
+    (= t :char) (symbol (str "c-" a))
+    (= t :backquote) (list 'bq (bel->pretty-clj a))
+    (= t :comma) (list 'cm (bel->pretty-clj a))
+    (= t :splice) (list 'spl (bel->pretty-clj a))
 
+    (m/bel-string? form)
+    (->> form
+         m/pair->clojure-seq
+         (map second)
+         cstring/join)
+
+    (= t :pair)
+    (let [[b-t] b]
+      (concat [(bel->pretty-clj a)]
+              (cond
+                (= m/bel-nil b) nil
+                (= :pair b-t) (bel->pretty-clj b)
+                :else ['. (bel->pretty-clj b)])))
+
+    :else
+    form))

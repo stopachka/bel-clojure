@@ -1715,9 +1715,8 @@ like an ordinary if, except that it takes an initial variable, which
 in any then expression will be lexically bound to the value returned
 by the preceding test expression.
 
-> (iflet x nil      'foo
-           '(a b c) (car x)
-                    'bar)
+> 
+(iflet x nil 'foo '(a b c) (car x) 'bar)
 a
 
 Notice how similar the definitions of case and iflet are, despite
@@ -1738,8 +1737,7 @@ and if so returns the car of it.
 With aif and some, it's trivial to define find, which returns the
 first element of a list that matches some test.
 
-> (find [= (car _) \a]
-        '("pear" "apple" "grape"))
+> (find [= (car _) \a] '("pear" "apple" "grape"))
 "apple"
 
 The begins function returns true iff its first argument is a list
@@ -1776,9 +1774,7 @@ that form implicit pairs. We've seen this already in if, case, and
 iflet, and we see it implemented with hug in the next macro, with,
 which is a multi-variable let.
 
-> (with (x 'a
-         y 'b)
-    (cons x y))
+> (with (x 'a y 'b) (cons x y))
 (a . b)
 
 It binds the variables in parallel in the sense that the bindings of
@@ -1786,9 +1782,7 @@ previous variables are not visible in the expressions defining the
 values of later ones.
 
 > (let x 'a
-    (with (x 'b
-           y x)
-      y))
+    (with (x 'b y x) y))
 a
 
 The next function, keep, returns all the elements of a list that pass
@@ -1984,9 +1978,7 @@ Now let's look at eif. It's like if except that which of its
 arguments get evaluated depends not on whether its test expression
 returns true, but whether it causes an error.
 
-> (eif x (car 'a)
-         'oops
-         x)
+> (eif x (car 'a) 'oops x)
 oops
 > (eif x (car '(a b))
          'oops
