@@ -80,5 +80,7 @@
   (is (= (ev "(safe (car '(a b)))") 'a))
   (is (= (ev "(map literal (list nil \"foo\" car))") '((nil o apply) t t)))
   (is (= (ev "(map variable (list 'x (uvar) t))") '(t t nil)))
-  (is (= (ev "((isa 'clo) map)") 't)))
+  (is (= (ev "((isa 'clo) map)") 't))
+  (is (= (ev "(match '(a (b) c d) (list 'a pair 'c t))") 't))
+  )
 
