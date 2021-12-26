@@ -1,5 +1,7 @@
 {:paths ["src" "resources"]
  :deps {instaparse/instaparse {:mvn/version "1.4.10"}}
- :aliases  {:nREPL
-            {:extra-deps
+ :aliases  {:test {:extra-paths ["test"]}
+            :nREPL
+            {:extra-paths ["test"]
+             :extra-deps
              {nrepl/nrepl {:mvn/version  "0.8.3"}}}}}
