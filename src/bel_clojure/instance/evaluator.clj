@@ -294,7 +294,12 @@
              [env [:assign-vars-1
                    scope (m/bel-optional-var var-head) arg-head]])
        rs])
-
+    (m/bel-typecheck? var-head)
+      [(conj es
+             [env [:assign-vars-typecheck-arg scope var-head arg-head]]
+             [env (m/bel-typecheck-f var-head)]
+             )
+       rs]
     :else
     [(conj es
            [env [:assign-vars-rest
@@ -515,83 +520,83 @@
         rest-es (drop-lastv es)
         [env [t :as form]] top]
     (cond
-        (= t :clj-err)
-        [rest-es (conj rs form)]
+      (= t :clj-err)
+      [rest-es (conj rs form)]
 
-        (= t :char)
-        [rest-es (conj rs form)]
+      (= t :char)
+      [rest-es (conj rs form)]
 
-        (m/bel-string? form)
-        [rest-es (conj rs form)]
+      (m/bel-string? form)
+      [rest-es (conj rs form)]
 
-        (m/bel-variable? form)
-        [rest-es (conj rs (get-variable env form))]
+      (m/bel-variable? form)
+      [rest-es (conj rs (get-variable env form))]
 
-        (= t :pair)
-        (bel-eval-pair rest-es rs env form)
+      (= t :pair)
+      (bel-eval-pair rest-es rs env form)
 
-        (= t :set-2)
-        (bel-eval-set-2 rest-es rs env form)
+      (= t :set-2)
+      (bel-eval-set-2 rest-es rs env form)
 
-        (= t :if-2)
-        (bel-eval-if-2 rest-es rs env form)
+      (= t :if-2)
+      (bel-eval-if-2 rest-es rs env form)
 
-        (= t :application-2)
-        (bel-eval-application-2 rest-es rs env form)
+      (= t :application-2)
+      (bel-eval-application-2 rest-es rs env form)
 
-        (= t :eval-many-1)
-        (bel-eval-many-1 rest-es rs env form)
+      (= t :eval-many-1)
+      (bel-eval-many-1 rest-es rs env form)
 
-        (= t :eval-many-2)
-        (bel-eval-many-2 rest-es rs env form)
+      (= t :eval-many-2)
+      (bel-eval-many-2 rest-es rs env form)
 
-        (= t :eval-lit-1)
-        (bel-eval-lit-1 rest-es rs env form)
+      (= t :eval-lit-1)
+      (bel-eval-lit-1 rest-es rs env form)
 
-        (= t :eval-prim-simple)
-        (bel-eval-prim-simple rest-es rs env form)
+      (= t :eval-prim-simple)
+      (bel-eval-prim-simple rest-es rs env form)
 
-        (= t :eval-mac-2)
-        (bel-eval-mac-2 rest-es rs env form)
+      (= t :eval-mac-2)
+      (bel-eval-mac-2 rest-es rs env form)
 
-        (= t :assign-vars-1)
-        (bel-assign-vars-1 rest-es rs env form)
+      (= t :assign-vars-1)
+      (bel-assign-vars-1 rest-es rs env form)
 
-        (= t :assign-vars-optional-arg)
-        (bel-assign-vars-optional-arg rest-es rs env form)
+      (= t :assign-vars-optional-arg)
+      (bel-assign-vars-optional-arg rest-es rs env form)
 
-        (= t :assign-vars-rest)
-        (bel-assign-vars-rest rest-es rs env form)
+      (= t :assign-vars-rest)
+      (bel-assign-vars-rest rest-es rs env form)
 
-        (= t :eval-clo-2)
-        (bel-eval-clo-2 rest-es rs env form)
+      (= t :eval-clo-2)
+      (bel-eval-clo-2 rest-es rs env form)
 
-        (= t :dyn-2)
-        (bel-eval-dyn-2 rest-es rs env form)
+      (= t :dyn-2)
+      (bel-eval-dyn-2 rest-es rs env form)
 
-        (= t :dyn-remove)
-        (bel-eval-dyn-remove rest-es rs env form)
+      (= t :dyn-remove)
+      (bel-eval-dyn-remove rest-es rs env form)
 
-        (= t :ccc-2)
-        (bel-eval-ccc-2 rest-es rs env form)
+      (= t :ccc-2)
+      (bel-eval-ccc-2 rest-es rs env form)
 
-        (= t :backquote)
-        (bel-eval-backquote rest-es rs env form)
+      (= t :backquote)
+      (bel-eval-backquote rest-es rs env form)
 
-        (= t :eval-bq-comma-1)
-        (bel-eval-bq-comma-1 rest-es rs env form)
+      (= t :eval-bq-comma-1)
+      (bel-eval-bq-comma-1 rest-es rs env form)
 
-        (= t :eval-bq-splice-1)
-        (bel-eval-bq-splice-1 rest-es rs env form)
+      (= t :eval-bq-splice-1)
+      (bel-eval-bq-splice-1 rest-es rs env form)
 
-        (= t :eval-bq-pair-1)
-        (bel-eval-bq-pair-1 rest-es rs env form)
+      (= t :eval-bq-pair-1)
+      (bel-eval-bq-pair-1 rest-es rs env form)
 
-        (= t :eval-bq-rest-1)
-        (bel-eval-bq-rest-1 rest-es rs env form)
+      (= t :eval-bq-rest-1)
+      (bel-eval-bq-rest-1 rest-es rs env form)
 
-        (= t :eval-apply-2)
-        (bel-eval-apply-2 rest-es rs env form))))
+      (= t :eval-apply-2)
+      (bel-eval-apply-2 rest-es rs env form))))
 
 ;; bel-eval
 ;; --------

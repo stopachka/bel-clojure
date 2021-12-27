@@ -10,7 +10,7 @@
 (defn ev [& strs]
   (r/bel->pretty-clj (last (e/eval-all @env strs))))
 
-(deftest repl-test
+(deftest core-test
   (is (= (ev "(no nil)") 't))
   (is (= (ev "(atom \\a)") 't))
   (is (= (ev "(atom '(a))") nil))
@@ -81,6 +81,7 @@
   (is (= (ev "(map literal (list nil \"foo\" car))") '((nil o apply) t t)))
   (is (= (ev "(map variable (list 'x (uvar) t))") '(t t nil)))
   (is (= (ev "((isa 'clo) map)") 't))
+  
   (is (= (ev "(match '(a (b) c d) (list 'a pair 'c t))") 't))
   )
 

@@ -8,7 +8,7 @@
 ;; Bootstrap
 
 (defn readable-source []
-  (->> (-> (io/resource "source.bel")
+  (->> (-> (io/resource "core.bel")
            slurp
            (cstring/split #"\n"))
        (partition-by cstring/blank?)

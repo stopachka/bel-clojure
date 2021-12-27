@@ -2595,6 +2595,8 @@ Before we look at them I should explain a feature of Bel parameter
 lists that we haven't encountered yet: type checking. A parameter of
 the form
 
+===BREAK===
+
 (t v f)
 
 means that unless f is true of the value passed to v, an error will

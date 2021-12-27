@@ -78,7 +78,7 @@
    comp->pair))
 
 (def bel-parse
-  (comp (partial walk/postwalk parse-postwalk) parse-string))
+  (comp (partial walk/postwalk parse-postwalk) parse-string cstring/trim))
 
 ;; ------
 ;; bel->pretty-clj
