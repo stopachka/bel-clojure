@@ -87,8 +87,12 @@
   (cond
     (= bel-nil form) form
 
+
+
+
+
     (not= :pair t)
-    (throw (Exception. "expected pair"))
+    (throw (Exception. (format "expected pair, got = %s" form)))
 
     :else
     r))

@@ -30,8 +30,7 @@
    (fn [[_t & children]]
      (m/<-pairs (map (fn [[_ v]] [:char v]) children)))))
 
-(def unwrap-name (form-transform :name (fn [[_ & xs]]
-                                         (cstring/join (map second xs)))))
+(def unwrap-name (form-transform :name second))
 
 (def quote->pair
   (form-transform :quote
@@ -76,12 +75,8 @@
 
 (def transform-number
   (form-transform :number
-                  (fn [[_ & xs]]
-                    [:number
-                     (->> xs
-                          (map second)
-                          cstring/join
-                          edn/read-string)])))
+                  (fn [[_ v]]
+                    [:number (edn/read-string v)])))
 
 ;; TODO: Right now, I only handle "sp"
 ;; We also want to handle tab, lf, cr, sp
@@ -111,8 +106,6 @@
 ;; ------
 ;; bel->pretty-clj
 
-(comment (bel-parse "\"f a\""))
-
 (defn bel->pretty-clj [[t a b :as form]]
   (cond
     (= m/bel-nil form) nil
@@ -139,3 +132,5 @@
 
     :else
     form))
+
+(bel-parse "(a b c)")

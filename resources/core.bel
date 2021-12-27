@@ -456,8 +456,6 @@
 
 (set simple (cor atom number))
 
-===BREAK===
-
 (mac do1 args
   (letu v
     `(let ,v ,(car args)
@@ -546,6 +544,8 @@
   (letu v
     `(let ,v ,x
        (zap [rem ,v _ ,@rest] ,place))))
+
+===BREAK===
 
 (set cbuf '((nil)))
 
