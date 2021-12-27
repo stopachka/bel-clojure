@@ -178,3 +178,7 @@
 (defn clj-num->bel-num  [x] [:number x])
 (defn clj-bool->bel [x] (if x bel-t bel-nil))
 
+(defn bel-char->clj [[_ v]]
+  (condp = v
+    "sp" " "
+    v))

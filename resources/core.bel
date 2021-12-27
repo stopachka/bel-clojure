@@ -419,7 +419,8 @@
 
 (com symbol (of list< nom))
 
-===BREAK===
+(def pint (n)
+  (and (int? n) (> n 0)))
 
 (def yc (f)
   ([_ _] [f (fn a (apply (_ _) a))]))
@@ -454,6 +455,8 @@
                                 (dups (cdr xs) f)))
 
 (set simple (cor atom number))
+
+===BREAK===
 
 (mac do1 args
   (letu v

@@ -141,6 +141,7 @@
    "-" (wrap-math-fn -)
    "*" (wrap-math-fn *)
    "/" (wrap-math-fn /)
+   "int?" (wrap-math-fn int?)
    "num<" (wrap-math-fn <)
    "abs" (wrap-math-fn #(Math/abs %))
    "hash" (wrap-math-fn #(.hashCode %))})

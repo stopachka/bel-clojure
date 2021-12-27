@@ -7,6 +7,7 @@
 
 (deftest test-reader
   (is (= (pretty-parse "\"str\"") "str"))
+  (is (= (pretty-parse "\"hello world\"") "hello world"))
   (is (= (pretty-parse "(a b c)") '(a b c)))
   (is (= (pretty-parse "_") '_))
   (is (= (pretty-parse "'+") '(quote . +)))
@@ -41,4 +42,6 @@
   (is (= (pretty-parse "1") 1))
   (is (= (pretty-parse "1.05") 1.05))
   (is (= (pretty-parse "-1.05") -1.05))
-  (is (= (pretty-parse "+0.05") 0.05)))
+  (is (= (pretty-parse "+0.05") 0.05))
+  (is (= (pretty-parse "int?") 'int?))
+  )

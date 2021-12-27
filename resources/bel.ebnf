@@ -2,8 +2,8 @@ sexp = string | list | abbrev_fn | comp | type_comp |  quote | backquote | comma
 number = sign? digit digit* dot? digit?*
 sign = '+' | '-'
 digit = #'[0-9]'
-list = lparen sexp? (<whitespace> sexp)* rparen
-abbrev_fn = <'['> sexp? (<whitespace> sexp)* <']'>
+list = lparen sexp? (<space*> sexp)* rparen
+abbrev_fn = <'['> sexp? (<space*> sexp)* <']'>
 comp = (symbol | no_comp) (<':'> symbol | no_comp)*
 type_comp = symbol <'|'> symbol
 no_comp = <'~'> symbol
@@ -18,7 +18,8 @@ backquote = <'`'> sexp
 comma = <','> sexp
 splice = <',@'> sexp
 name = name_s name_s* digit* name_s*
-name_s = #'[a-zA-Z!\-*+_=>\/<\^]+'
-any_char = #'.'
-whitespace = #'\s+'
-
+name_s = #'[a-zA-Z!\-*+_=>\/<\^\?]+'
+any_char = #'.' | space | newline | tab
+space = #'\s'
+tab = #'\t'
+newline = #'\n'
