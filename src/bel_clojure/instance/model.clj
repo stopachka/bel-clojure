@@ -1,6 +1,6 @@
 (ns bel-clojure.instance.model
   (:require
-    [clojure.string :as cstring])
+   [clojure.string :as cstring])
   (:import
    (java.util ArrayList)))
 
@@ -67,11 +67,9 @@
        (= bel-nil r) []
        :else [r]))))
 
-
 (defn p-id [[t-a :as a] b]
   (let [id-f (if (= t-a :pair) identical? =)]
     (if (id-f a b) bel-t bel-nil)))
-
 
 (defn p-join [a b] (make-pair a b))
 
@@ -84,7 +82,6 @@
 
     :else
     l))
-
 
 (defn p-cdr [[t _l r :as form]]
   (cond
@@ -99,11 +96,9 @@
 (defn p-type [[t]]
   [:symbol (name t)])
 
-
 (defn p-xar [form y]
   (.set form 1 y)
   form)
-
 
 (defn p-xdr [form y]
   (.set form 2 y)
@@ -178,4 +173,8 @@
 (defn bel-typecheck-var [[_ _h [_ variable]]] variable)
 
 (defn bel-typecheck-f [[_ _h [_ _variable r]]] (p-car r))
+
+(def bel-unwrap second)
+(defn clj-num->bel-num  [x] [:number x])
+(defn clj-bool->bel [x] (if x bel-t bel-nil))
 

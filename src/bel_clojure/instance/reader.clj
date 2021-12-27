@@ -4,7 +4,8 @@
    [instaparse.core :as insta]
    [clojure.walk :as walk]
    [bel-clojure.instance.model :as m]
-   [clojure.string :as cstring]))
+   [clojure.string :as cstring]
+   [clojure.edn :as edn]))
 
 (defn form-transform
   [k f]
@@ -29,7 +30,8 @@
    (fn [[_t & children]]
      (m/<-pairs (map (fn [[_ v]] [:char v]) children)))))
 
-(def unwrap-name (form-transform :name second))
+(def unwrap-name (form-transform :name (fn [[_ & xs]]
+                                         (cstring/join (map second xs)))))
 
 (def quote->pair
   (form-transform :quote
@@ -69,8 +71,17 @@
   (form-transform :type_comp
                   (fn [[_ a b]]
                     (m/make-pair
-                      m/bel-t
-                      (m/make-pair a (m/make-pair b m/bel-nil))))))
+                     m/bel-t
+                     (m/make-pair a (m/make-pair b m/bel-nil))))))
+
+(def transform-number
+  (form-transform :number
+                  (fn [[_ & xs]]
+                    [:number
+                     (->> xs
+                          (map second)
+                          cstring/join
+                          edn/read-string)])))
 
 (def parse-string (-> "bel.ebnf" io/resource insta/parser))
 
@@ -83,7 +94,8 @@
    unwrap-sexp
    abbrev-fn->pair
    comp->pair
-   type-comp->pair))
+   type-comp->pair
+   transform-number))
 
 (def bel-parse
   (comp (partial walk/postwalk parse-postwalk) parse-string cstring/trim))
@@ -100,6 +112,7 @@
     (= t :comma) (list 'cm (bel->pretty-clj a))
     (= t :splice) (list 'spl (bel->pretty-clj a))
     (= t :err) (list 'err (bel->pretty-clj (second form)))
+    (= t :number) a
     (m/bel-string? form)
     (->> form
          m/pair->clojure-seq

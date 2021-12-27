@@ -114,5 +114,10 @@
          '(a b a c a d)))
   (is (= (ev "(match '(a (b) c d) (list 'a pair 'c t))") 't))
   (is (= (ev "(split (is \\a) \"frantic\")") '("fr" "antic")))
-  (is (= (ev "") nil)))
+  (is (= (ev "(inc 2)") 3))
+  (is (= (ev "(len '(a b c))") 3))
+  (is (= (ev "(pos \\s \"ask\")") 2))
+  (is (= (ev "(> 3 2)") 't))
+  (is (= (ev "(< \"apple\" \"apply\")") 't))
+  )
 
