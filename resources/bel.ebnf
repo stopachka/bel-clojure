@@ -16,5 +16,6 @@ comma = <','> sexp
 splice = <',@'> sexp
 name = #'[a-zA-Z!\-*+_=>\/<\^][a-zA-Z0-9!\-*+_=>\/<\^\?]*'
 number = #'[+-]?[0-9][0-9]*[.]?[0-9]*'
-any_char = #'.'
+any_char = #'.' | space
+space = #'\s'
 whitespace = #'\s+'

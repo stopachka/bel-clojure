@@ -82,7 +82,7 @@
 ;; We also want to handle tab, lf, cr, sp
 ;; I don't know lf cr sp. Will look deeper on that
 
-(def unwrap-space
+(def transform-space
   (form-transform :space (fn [_] "sp")))
 
 (def parse-string (-> "bel.ebnf" io/resource insta/parser))
@@ -94,7 +94,7 @@
    quote->pair
    unwrap-name
    unwrap-sexp
-   unwrap-space
+   transform-space
    abbrev-fn->pair
    comp->pair
    type-comp->pair
