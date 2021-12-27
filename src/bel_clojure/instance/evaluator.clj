@@ -255,7 +255,7 @@
 ;; -------------
 ;; bel-eval-clo
 
-(defn bel-assign-vars-typecheck-2 [es rs env [_ scope variable arg]]
+(defn bel-assign-vars-typecheck-2 [es rs env [_ variable arg]]
   (let [check (last rs)
         rest-rs (drop-lastv rs)]
     (if (= m/bel-nil check)
@@ -269,37 +269,37 @@
       [(conj es
              [env
               [:assign-vars-1
-               scope
                (m/bel-typecheck-var variable)
                arg]])
        rest-rs])))
 
-(defn bel-assign-vars-typecheck-1 [es rs env [_ scope variable arg]]
+(defn bel-assign-vars-typecheck-1 [es rs env [_ variable arg]]
   (let [evaled-f (last rs)
         rest-rs (drop-lastv rs)]
     [(conj es
-           [env [:assign-vars-typecheck-2 scope variable arg]]
+           [env [:assign-vars-typecheck-2 variable arg]]
            [env (m/make-pair
                  evaled-f
                  (m/make-pair (m/make-pair m/bel-quote arg)
                               m/bel-nil))])
      rest-rs]))
 
-(defn bel-assign-vars-optional-arg [es rs env [_ scope variable]]
+(defn bel-assign-vars-optional-arg [es rs env [_ variable]]
   (let [arg-evaled (last rs)
         rest-rs (drop-lastv rs)]
     [(conj es
-           [env [:assign-vars-1 scope variable arg-evaled]])
+           [env [:assign-vars-1 variable arg-evaled]])
      rest-rs]))
 
 (defn bel-assign-vars-rest [es rs env [_ var-head arg-head]]
   (let [scope (last rs)
         rest-rs (drop-lastv rs)]
     [(conj es
-           [env [:assign-vars-1 scope var-head arg-head]])
+           [(assoc env :scope scope)
+            [:assign-vars-1 var-head arg-head]])
      rest-rs]))
 
-(defn bel-assign-vars-1 [es rs env [_ scope var-head arg-head]]
+(defn bel-assign-vars-1 [es rs {:keys [scope] :as env} [_ var-head arg-head]]
   (cond
     (every? (partial = m/bel-nil) [var-head arg-head])
     [es (conj rs scope)]
@@ -315,17 +315,17 @@
     (if (= m/bel-nil arg-head)
       [(conj es
              [env [:assign-vars-optional-arg
-                   scope (m/bel-optional-var var-head)]]
+                   (m/bel-optional-var var-head)]]
              [env (m/bel-optional-arg var-head)])
 
        rs]
       [(conj es
              [env [:assign-vars-1
-                   scope (m/bel-optional-var var-head) arg-head]])
+                   (m/bel-optional-var var-head) arg-head]])
        rs])
     (m/bel-typecheck? var-head)
     [(conj es
-           [env [:assign-vars-typecheck-1 scope var-head arg-head]]
+           [env [:assign-vars-typecheck-1 var-head arg-head]]
            [env (m/bel-typecheck-f var-head)])
      rs]
     :else
@@ -333,7 +333,7 @@
            [env [:assign-vars-rest
                  (m/p-cdr var-head) (m/p-cdr arg-head)]]
            [env [:assign-vars-1
-                 scope (m/p-car var-head) (m/p-car arg-head)]])
+                 (m/p-car var-head) (m/p-car arg-head)]])
      rs]))
 
 (defn bel-eval-clo-2 [es rs env [_ body-head]]
@@ -346,7 +346,8 @@
 (defn bel-clo-es [env litv args-head]
   (let [[_ scope [_ args-sym-head [_ body-head]]] litv]
     [[env [:eval-clo-2 body-head]]
-     [env [:assign-vars-1 scope args-sym-head args-head]]]))
+     [(assoc env :scope scope)
+      [:assign-vars-1 args-sym-head args-head]]]))
 
 (defn bel-eval-clo [es rs env litv args-head]
   [(into es (bel-clo-es env litv args-head))

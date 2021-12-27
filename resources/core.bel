@@ -277,6 +277,12 @@
 (def isa (name)
   [begins _ `(lit ,name) id])
 
+(def function (x)
+  (find [(isa _) x] '(prim clo)))
+
+(def con (x)
+  (fn args x))
+
 (def compose fs
   (reduce (fn (f g)
             (fn args (f (apply g args))))
@@ -318,8 +324,6 @@
 
 (def fuse (f . args)
   (apply append (apply map f args)))
-
-===BREAK===
 
 (mac letu (v . body)
   (if ((cor variable atom) v)

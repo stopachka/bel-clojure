@@ -2866,8 +2866,7 @@ will yield a function equivalent to
 (fn (x)
   (and (car x) (cdr x)))
 
-> (map ((combine and) car cdr)
-       '((a . nil) (a . b) (nil . b)))
+> (map ((combine and) car cdr) '((a . nil) (a . b) (nil . b)))
 (nil t nil)
 
 Since combine of and and or are so frequently needed, we predefine
@@ -2928,8 +2927,7 @@ And upon is a sort of reverse call, in the sense that it saves an
 argument, and then tells you what calling things on that argument
 will return:
 
-> (map (upon '(a b c))
-       (list car cadr cdr))
+> (map (upon '(a b c)) (list car cadr cdr))
 (a b (b c))
 
 The next function, pairwise, returns true iff its first argument is

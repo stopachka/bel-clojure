@@ -81,8 +81,6 @@
   (is (= (ev "(map literal (list nil \"foo\" car))") '((nil o apply) t t)))
   (is (= (ev "(map variable (list 'x (uvar) t))") '(t t nil)))
   (is (= (ev "((isa 'clo) map)") 't))
-
-  (is (= (ev "(match '(a (b) c d) (list 'a pair 'c t))") 't))
   (is (= (ev "(def consa (xs|pair) (cons 'a xs))"
              "(consa 'z)")
          '(err (quote . mistype))))
@@ -95,5 +93,26 @@
   (is (=
        (ev "(def foo ((o (t (x . y) [caris _ 'a]) '(a . b))) x)"
            "(foo)")
-       'a)))
+       'a))
+  (is (= (ev "((fn (x (o y x)) y) 'a)") 'a))
+  (is (= (ev "((fn (f x|f) x) pair 'a)")
+         '(err (quote . mistype))))
+  (is (= (ev "(map function (list car append 'foo))") '(prim clo nil)))
+  (is (= (ev "(map (con 'yo) '(a b c))") '(yo yo yo)))
+  (is (= (ev "(car:cdr '(a b c))") 'b))
+  (is (= (ev "(map ~cdr '((a) (a b c) (a b)))")
+         '(t nil nil)))
+  (is (= (ev "(map ((combine and) car cdr) '((a . nil) (a . b) (nil . b)))")
+         '(nil b nil)))
+  (is (= (ev "((cand pair cdr) '(a b))") 'b))
+  (is (= (ev "((cor char pair) 'a)") nil))
+  (is (= (ev "(foldl cons nil '(a b))") '(b a)))
+  (is (= (ev "(foldr cons nil '(a b))") '(a b)))
+  (is (= (ev "(map (upon '(a b c)) (list car cadr cdr))")
+         '(a b (b c))))
+  (is (= (ev "(fuse [list 'a _] '(b c d))")
+         '(a b a c a d)))
+  (is (= (ev "(match '(a (b) c d) (list 'a pair 'c t))") 't))
+  (is (= (ev "(split (is \\a) \"frantic\")") '("fr" "antic")))
+  (is (= (ev "") nil)))
 
