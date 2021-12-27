@@ -87,8 +87,12 @@
   (cond
     (= bel-nil form) form
 
+
+
+
+
     (not= :pair t)
-    (throw (Exception. "expected pair"))
+    (throw (Exception. (format "expected pair, got = %s" form)))
 
     :else
     r))
@@ -178,3 +182,7 @@
 (defn clj-num->bel-num  [x] [:number x])
 (defn clj-bool->bel [x] (if x bel-t bel-nil))
 
+(defn bel-char->clj [[_ v]]
+  (condp = v
+    "sp" " "
+    v))

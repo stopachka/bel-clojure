@@ -3194,10 +3194,7 @@ The withs macro is like with except that the bindings of the
 preceding variables are visible in the expressions defining the
 values of later ones.
 
-> (let x 'a
-    (withs (x 'b
-            y x)
-      y))
+> (let x 'a (withs (x 'b y x) y))
 b
 
 The bind macro is like a call to dyn with a body. Since bind is a

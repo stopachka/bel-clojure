@@ -30,8 +30,7 @@
    (fn [[_t & children]]
      (m/<-pairs (map (fn [[_ v]] [:char v]) children)))))
 
-(def unwrap-name (form-transform :name (fn [[_ & xs]]
-                                         (cstring/join (map second xs)))))
+(def unwrap-name (form-transform :name second))
 
 (def quote->pair
   (form-transform :quote
@@ -76,12 +75,15 @@
 
 (def transform-number
   (form-transform :number
-                  (fn [[_ & xs]]
-                    [:number
-                     (->> xs
-                          (map second)
-                          cstring/join
-                          edn/read-string)])))
+                  (fn [[_ v]]
+                    [:number (edn/read-string v)])))
+
+;; TODO: Right now, I only handle "sp"
+;; We also want to handle tab, lf, cr, sp
+;; I don't know lf cr sp. Will look deeper on that
+
+(def transform-space
+  (form-transform :space (fn [_] "sp")))
 
 (def parse-string (-> "bel.ebnf" io/resource insta/parser))
 
@@ -92,6 +94,7 @@
    quote->pair
    unwrap-name
    unwrap-sexp
+   transform-space
    abbrev-fn->pair
    comp->pair
    type-comp->pair
@@ -116,7 +119,7 @@
     (m/bel-string? form)
     (->> form
          m/pair->clojure-seq
-         (map second)
+         (map m/bel-char->clj)
          cstring/join)
 
     (= t :pair)
@@ -129,3 +132,5 @@
 
     :else
     form))
+
+(bel-parse "(a b c)")

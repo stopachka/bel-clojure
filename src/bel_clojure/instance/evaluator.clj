@@ -141,6 +141,7 @@
    "-" (wrap-math-fn -)
    "*" (wrap-math-fn *)
    "/" (wrap-math-fn /)
+   "int?" (wrap-math-fn int?)
    "num<" (wrap-math-fn <)
    "abs" (wrap-math-fn #(Math/abs %))
    "hash" (wrap-math-fn #(.hashCode %))})
@@ -658,7 +659,7 @@
 
 (defn debug-loop [es rs]
   (println "in:")
-  (mapv (comp println second) es)
+  (mapv (comp println r/bel->pretty-clj second) es)
   (println "out:")
   (mapv println rs)
   (println "---"))
@@ -666,6 +667,7 @@
 (defn bel-eval [eval-stack return-stack]
   (loop [es eval-stack
          rs return-stack]
+    #_(debug-loop es rs)
     (if (empty? es)
       (last rs)
       (let [[new-es new-rs] (bel-eval-step es rs)]

@@ -4,9 +4,9 @@
    [clojure.test :refer :all]))
 
 (def pretty-parse (comp bel->pretty-clj bel-parse))
-
 (deftest test-reader
   (is (= (pretty-parse "\"str\"") "str"))
+  (is (= (pretty-parse "\"hello world\"") "hello world"))
   (is (= (pretty-parse "(a b c)") '(a b c)))
   (is (= (pretty-parse "_") '_))
   (is (= (pretty-parse "'+") '(quote . +)))
@@ -22,6 +22,8 @@
   (is (= (pretty-parse ">=") '>=))
   (is (= (pretty-parse "[id _ (car args)]")
          '(fn (_) (id _ (car args)))))
+  (is (= (pretty-parse "(mac e1)")
+         '(mac e1)))
   (is (= (pretty-parse "e1")
          'e1))
   (is (= (pretty-parse "car:cdr")
@@ -38,7 +40,9 @@
   (is (= (pretty-parse "i<") 'i<))
   (is (= (pretty-parse "i^") (symbol "i^")))
   (is (= (pretty-parse "a|b") '(t a b)))
+
   (is (= (pretty-parse "1") 1))
   (is (= (pretty-parse "1.05") 1.05))
   (is (= (pretty-parse "-1.05") -1.05))
-  (is (= (pretty-parse "+0.05") 0.05)))
+  (is (= (pretty-parse "+0.05") 0.05))
+  (is (= (pretty-parse "int?") 'int?)))

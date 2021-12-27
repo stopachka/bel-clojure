@@ -119,5 +119,39 @@
   (is (= (ev "(pos \\s \"ask\")") 2))
   (is (= (ev "(> 3 2)") 't))
   (is (= (ev "(< \"apple\" \"apply\")") 't))
-  )
+  (is (= (ev "((afn (x)
+                (if (no x) 0 (inc:self:cdr x))) '(a b c))")
+         3))
+
+  (is (= (ev "(pint 1)") 't))
+  (is (= (ev "(runs pint '(1 1 0 0 0 1 1 1 0))")
+         '((1 1) (0 0 0) (1 1 1) (0))))
+
+  (is (= (ev "(tokens \"the age of the essay\")")
+         '("the" "age" "of" "the" "essay")))
+
+  (is (= (ev "(dups \"abracadabra\")") "abr"))
+  (is (= (ev "(consif (cadr '(a)) '(x y))") '(x y)))
+  (is (= (ev "(let x 'a (withs (x 'b y x) y))") nil)))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
