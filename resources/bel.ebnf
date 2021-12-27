@@ -1,7 +1,8 @@
-sexp = string | list | abbrev_fn | comp |  quote | backquote | comma | splice | char | symbol | dot
+sexp = string | list | abbrev_fn | comp | type_comp |  quote | backquote | comma | splice | char | symbol | dot
 list = lparen sexp? (<whitespace> sexp)* rparen
 abbrev_fn = <'['> sexp? (<whitespace> sexp)* <']'>
 comp = (symbol | no_comp) (<':'> symbol | no_comp)*
+type_comp = symbol <'|'> symbol
 no_comp = <'~'> symbol
 <lparen> = <'('>
 <rparen> = <')'>

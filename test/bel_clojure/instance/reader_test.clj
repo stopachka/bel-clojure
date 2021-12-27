@@ -36,4 +36,6 @@
          (list 'compose 'car (symbol "i/"))))
   (is (= (pretty-parse "i*") 'i*))
   (is (= (pretty-parse "i<") 'i<))
-  (is (= (pretty-parse "i^") (symbol "i^"))))
+  (is (= (pretty-parse "i^") (symbol "i^"))) 
+  
+  (is (= (pretty-parse "a|b") '(t a b))))

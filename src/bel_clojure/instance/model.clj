@@ -121,14 +121,7 @@
        (map (fn [c] [:char (str c)]))
        <-pairs))
 
-;; todo: primitives for streams, sys
-
 (defn p-coin [] (rand-nth [bel-t bel-nil]))
-
-(comment (p-coin))
-
-;; -----
-;; Types
 
 (defn pair-proper? [[p-t :as p]]
   (or (= bel-nil p)
@@ -178,4 +171,11 @@
 (defn bel-optional-var [[_ _h [_ variable]]] variable)
 
 (defn bel-optional-arg [[_ _h [_ _variable r]]] (p-car r))
+
+(defn bel-typecheck? [[_ h]]
+  (= bel-t h))
+
+(defn bel-typecheck-var [[_ _h [_ variable]]] variable)
+
+(defn bel-typecheck-f [[_ _h [_ _variable r]]] (p-car r))
 

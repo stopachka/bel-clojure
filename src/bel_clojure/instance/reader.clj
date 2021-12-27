@@ -65,6 +65,13 @@
                       []
                       xs)))))
 
+(def type-comp->pair
+  (form-transform :type_comp
+                  (fn [[_ a b]]
+                    (m/make-pair
+                      m/bel-t
+                      (m/make-pair a (m/make-pair b m/bel-nil))))))
+
 (def parse-string (-> "bel.ebnf" io/resource insta/parser))
 
 (def parse-postwalk
@@ -75,10 +82,11 @@
    unwrap-name
    unwrap-sexp
    abbrev-fn->pair
-   comp->pair))
+   comp->pair
+   type-comp->pair))
 
 (def bel-parse
-  (comp (partial walk/postwalk parse-postwalk) parse-string))
+  (comp (partial walk/postwalk parse-postwalk) parse-string cstring/trim))
 
 ;; ------
 ;; bel->pretty-clj
