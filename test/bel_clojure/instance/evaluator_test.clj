@@ -85,4 +85,12 @@
 
   (is (= (ev
           "((lit clo nil ((t x (lit clo nil (x) (id t x)))) 'hello) nil)")
-         '(err (quote . mistype)))))
+         '(err (quote . mistype))))
+
+  (is (= (ev "1") 1))
+  (is (= (ev "(+ 1 2.0)") 3.0))
+  (is (= (ev "(num< 2 3)") 't))
+  (is (= (ev "(abs -4)") 4))
+  (is (= (ev "(+ 0.05 (/ 19 20))") 1.0))
+
+  (is (number? (ev "(hash \\bel)"))))

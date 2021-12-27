@@ -141,7 +141,14 @@
 
 (def pair   (x) (= (type x) 'pair))
 
+
 (def char   (x) (= (type x) 'char))
+
+; stopa-edit
+
+(def number  (x) (= (type x) 'number))
+
+; /stopa-edit
 
 (def stream (x) (= (type x) 'stream))
 
@@ -358,192 +365,6 @@
 (mac unless (expr . body)
   `(when (no ,expr) ,@body))
 
-(set i0  nil
-     i1  '(t)
-     i2  '(t t)
-     i10 '(t t t t t t t t t t)
-     i16 '(t t t t t t t t t t t t t t t t))
-
-(set i< udrop)
-
-(def i+ args
-  (apply append args))
-
-(def i- (x y)
-  (if (no x) (list '- y)
-      (no y) (list '+ x)
-             (i- (cdr x) (cdr y))))
-
-(def i* args
-  (foldr (fn (x y) (fuse (con x) y))
-         i1
-         args))
-
-(def i/ (x y (o q))
-  (if (no x)   (list q nil)
-      (i< x y) (list q x)
-               (i/ (udrop y x) y (i+ q i1))))
-
-(def i^ (x y)
-  (foldr i* i1 (map (con x) y)))
-
-(def r+ ((xn xd) (yn yd))
-  (list (i+ (i* xn yd) (i* yn xd))
-        (i* xd yd)))
-
-(def r- ((xn xd) (yn yd))
-  (let (s n) (i- (i* xn yd) (i* yn xd))
-    (list s n (i* xd yd))))
-
-(def r* ((xn xd) (yn yd))
-  (list (i* xn yn) (i* xd yd)))
-
-(def r/ ((xn xd) (yn yd))
-  (list (i* xn yd) (i* xd yn)))
-
-(set srzero (list '+ i0 i1)
-     srone  (list '+ i1 i1))
-
-(def sr+ ((xs . xr) (ys . yr))
-  (if (= xs '-)
-      (if (= ys '-)
-          (cons '- (r+ xr yr))
-          (r- yr xr))
-      (if (= ys '-)
-          (r- xr yr)
-          (cons '+ (r+ xr yr)))))
-
-(def sr- (x y)
-  (sr+ x (srinv y)))
-
-(def srinv ((s n d))
-  (list (if (and (= s '+) (~= n i0)) '- '+)
-        n
-        d))
-
-(def sr* ((xs . xr) (ys . yr))
-  (cons (if (= xs '-)
-            (case ys - '+ '-)
-            ys)
-        (r* xr yr)))
-
-(def sr/ (x y)
-  (sr* x (srrecip y)))
-
-(def srrecip ((s (t n [~= _ i0]) d))
-  (list s d n))
-
-(def sr< ((xs xn xd) (ys yn yd))
-  (if (= xs '+)
-      (if (= ys '+)
-          (i< (i* xn yd) (i* yn xd))
-          nil)
-      (if (= ys '+)
-          (~= xn yn i0)
-          (i< (i* yn xd) (i* xn yd)))))
-
-(set srnum cadr
-     srden caddr)
-
-(def c+ ((xr xi) (yr yi))
-  (list (sr+ xr yr) (sr+ xi yi)))
-
-(def c* ((xr xi) (yr yi))
-  (list (sr- (sr* xr yr) (sr* xi yi))
-        (sr+ (sr* xi yr) (sr* xr yi))))
-
-(def litnum (r (o i srzero))
-  (list 'lit 'num r i))
-
-(def number (x)
-  (let r (fn (y)
-           (match y (list [in _ '+ '-] proper proper)))
-    (match x `(lit num ,r ,r))))
-
-(set numr car:cddr
-     numi cadr:cddr)
-
-(set rpart litnum:numr
-     ipart litnum:numi)
-
-(def real (x)
-  (and (number x) (= (numi x) srzero)))
-
-(def inv (x)
-  (litnum (srinv:numr x) (srinv:numi x)))
-
-(def abs (x)
-  (litnum (cons '+ (cdr (numr x)))))
-
-(def simplify ((s n d))
-  (if (= n i0) (list '+ n i1)
-      (= n d)  (list s i1 i1)
-               (let g (apply i* ((of common factor) n d))
-                 (list s (car:i/ n g) (car:i/ d g)))))
-
-(def factor (x (o d i2))
-  (if (i< x d)
-      nil
-      (let (q r) (i/ x d)
-        (if (= r i0)
-            (cons d (factor q d))
-            (factor x (i+ d i1))))))
-
-(def common (xs ys)
-  (if (in nil xs ys)
-      nil
-      (let (a b) (split (is (car xs)) ys)
-        (if b
-            (cons (car xs)
-                  (common (cdr xs) (append a (cdr b))))
-            (common (cdr xs) ys)))))
-
-(set buildnum (of litnum simplify))
-
-(def recip (x)
-  (with (r (numr x)
-         i (numi x))
-    (let d (sr+ (sr* r r) (sr* i i))
-      (buildnum (sr/ r d)
-                (sr/ (srinv i) d)))))
-
-; stopa-edit
-; hack to punt number-parser from our interpreter
-; since PG only has a few numbers in his source,
-; we can just define them.
-; When a user enters a number, it'll use PG's
-; interpreter, so we won't have to figure that out
-
-(set 0 (lit num (+ () (t)) (+ () (t))))
-
-(set 1 (lit num (+ (t) (t)) (+ () (t))))
-
-; /stopa-edit
-
-(def + ns
-  (foldr (fn (x y)
-           (apply buildnum ((of c+ cddr) x y)))
-         0
-         ns))
-
-===BREAK===
-
-(def - ns
-  (if (no ns)       0
-      (no (cdr ns)) (inv (car ns))
-                    (+ (car ns) (inv (apply + (cdr ns))))))
-
-(def * ns
-  (foldr (fn (x y)
-           (apply buildnum ((of c* cddr) x y)))
-         1
-         ns))
-
-(def / ns
-  (if (no ns)
-      1
-      (* (car ns) (recip (apply * (cdr ns))))))
-
 (def inc (n) (+ n 1))
 
 (def dec (n) (- n 1))
@@ -556,8 +377,12 @@
 (def len (xs)
   (if (no xs) 0 (inc:len:cdr xs)))
 
+; stopa-edit
+
 (def charn (c)
-  (dec:pos c chars caris))
+  (hash c))
+
+; stopa-edit
 
 (def < args
   (pairwise bin< args))
@@ -582,7 +407,11 @@
 (def com (f g)
   (set comfns (put f g comfns)))
 
-(com real (of sr< numr))
+; stopa-edit
+
+(com number num<)
+
+; /stopa-edit
 
 (com char (of < charn))
 
@@ -590,14 +419,7 @@
 
 (com symbol (of list< nom))
 
-(def int (n)
-  (and (real n) (= (srden:numr n) i1)))
-
-(def whole (n)
-  (and (int n) (~< n 0)))
-
-(def pint (n)
-  (and (int n) (> n 0)))
+===BREAK===
 
 (def yc (f)
   ([_ _] [f (fn a (apply (_ _) a))]))

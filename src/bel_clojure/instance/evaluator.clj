@@ -114,6 +114,14 @@
   [x]
   (println "[DEBUG] " (r/bel->pretty-clj x)))
 
+(defn wrap-math-fn [f]
+  (fn [& args]
+    (let [xs (map m/bel-unwrap args)
+          v (apply f xs)]
+      (if
+       (number? v) (m/clj-num->bel-num v)
+       (m/clj-bool->bel v)))))
+
 (def prim-name->fn
   {"id" #'m/p-id
    "car" #'m/p-car
@@ -125,7 +133,17 @@
    "sym" #'m/p-sym
    "nom" #'m/p-nom
    "coin" #'m/p-coin
-   "p-debug" #'p-debug})
+   "p-debug" #'p-debug
+
+   ;; math
+
+   "+" (wrap-math-fn +)
+   "-" (wrap-math-fn -)
+   "*" (wrap-math-fn *)
+   "/" (wrap-math-fn /)
+   "num<" (wrap-math-fn <)
+   "abs" (wrap-math-fn #(Math/abs %))
+   "hash" (wrap-math-fn #(.hashCode %))})
 
 (def special-prim-name->fn
   {"dyn" #'p-dyn
@@ -209,11 +227,10 @@
 ;; bel-eval-prim
 
 (defn bel-nil-args [f args]
-  (let [niled-args (->> f
-                        meta
-                        :arglists
-                        first
-                        (map-indexed (fn [i _] (nth args i m/bel-nil))))]
+  (let [arglist (->> f meta :arglists first)
+        niled-args (if arglist
+                     (map-indexed (fn [i _] (nth args i m/bel-nil)) arglist)
+                     args)]
     (assert (<= (count args) (count niled-args))
             (format
              "too many args = %s (%s) niled-args = %s (%s) niled-args"
@@ -555,6 +572,9 @@
       (= t :char)
       [rest-es (conj rs form)]
 
+      (= t :number)
+      [rest-es (conj rs form)]
+
       (m/bel-string? form)
       [rest-es (conj rs form)]
 
@@ -646,7 +666,6 @@
 (defn bel-eval [eval-stack return-stack]
   (loop [es eval-stack
          rs return-stack]
-    #_(debug-loop es rs)
     (if (empty? es)
       (last rs)
       (let [[new-es new-rs] (bel-eval-step es rs)]
