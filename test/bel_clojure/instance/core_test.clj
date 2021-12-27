@@ -143,9 +143,10 @@
          'a))
   (is (= (ev "(set x (newq))" "(enq 'a x)" "(enq 'b x)" "(deq x)" "x")
          '((b))))
-  (is (= (ev "(let x '(a b c) (zap cdr x) x)") nil))
-  (is (= (ev "(let x 'a (where x))") nil))
-  (is (= (ev "") nil))
-  (is (= (ev "") nil))
-  (is (= (ev "") nil)))
+  (is (= (ev "(let x '(a b c) (zap cdr x) x)") '(b c)))
+  (is (= (ev "(let x '(a b c) (push 'z x) (pull 'c x) x)") '(z a b)))
+
+  ;; broken: to investigate soon!
+  (is (= (ev "(let x '(1 2 3) (++ (car x) 10) x)") '(z a b)))
+  )
 

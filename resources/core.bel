@@ -497,8 +497,6 @@
 
 (set last car:lastcdr)
 
-===BREAK===
-
 (def newq ()
   (list nil))
 
@@ -1087,6 +1085,7 @@
     `((rfn ,vf (,vp)
         (whenlet ,var ,vp ,@body (,vf ,expr)))
       ,expr)))
+
 
 (mac loop (var init update test . body)
   (letu v

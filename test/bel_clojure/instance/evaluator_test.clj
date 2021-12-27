@@ -2,7 +2,8 @@
   (:require
    [bel-clojure.instance.reader :as r]
    [bel-clojure.instance.evaluator :refer :all]
-   [clojure.test :refer :all]))
+   [clojure.test :refer :all]
+   [bel-clojure.instance.model :as m]))
 
 (defn ev-all [env strs]
   (mapv r/bel->pretty-clj (eval-all env strs)))
@@ -86,7 +87,7 @@
   (is (= (ev
           "((lit clo nil ((t x (lit clo nil (x) (id t x)))) 'hello) nil)")
          '(err (quote . mistype))))
-
+  (ev "(id t t t)")
   (is (= (ev "1") 1))
   (is (= (ev "(+ 1 2.0)") 3.0))
   (is (= (ev "(num< 2 3)") 't))
@@ -97,6 +98,6 @@
   (is (= (ev "(set x 'a)" "(where x)")
          '((x . a) d)))
   (is (= (ev "(where (car '(a b)))")
-         '((a b) . a)))
+         '((a b) a)))
   (is (= (ev "(where (cdr '(a b)))")
-         '((a b) . d))))
+         '((a b) d))))
