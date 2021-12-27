@@ -159,8 +159,6 @@
 (def string (x)
   (and (proper x) (all char x)))
 
-(string "abc")
-
 (def mem (x ys (o f =))
   (some [f _ x] ys))
 
@@ -509,15 +507,6 @@
 (def deq (q)
   (atomic (do1 (car (car q))
                (xar q (cdr (car q))))))
-
-(mac set args
-  (cons 'do
-        (map (fn ((p (o e t)))
-               (letu v
-                 `(atomic (let ,v ,e
-                            (let (cell loc) (where ,p t)
-                              ((case loc a xar d xdr) cell ,v))))))
-             (hug args))))
 
 (mac zap (op place . args)
   (letu (vo vc vl va)
@@ -1096,6 +1085,7 @@
     `((rfn ,vf (,vp)
         (whenlet ,var ,vp ,@body (,vf ,expr)))
       ,expr)))
+
 
 (mac loop (var init update test . body)
   (letu v

@@ -2,7 +2,8 @@
   (:require
    [bel-clojure.instance.reader :as r]
    [bel-clojure.instance.evaluator :refer :all]
-   [clojure.test :refer :all]))
+   [clojure.test :refer :all]
+   [bel-clojure.instance.model :as m]))
 
 (defn ev-all [env strs]
   (mapv r/bel->pretty-clj (eval-all env strs)))
@@ -16,7 +17,7 @@
   (is (= (ev "\"foo\"") "foo"))
   (is (= (ev "'foo") 'foo))
   (is (= (ev "(type globe)") 'pair))
-  (is (= (ev "(type scope)") 'pair))
+  (is (= (ev "(type scope)") 'symbol))
   (is (= (ev "(lit (foo bar baz))") '(lit (foo bar baz))))
   (is (= (ev "car") '(lit prim car)))
   (is (= (ev "(set a 'b c 'd)" "c") 'd))
@@ -86,11 +87,17 @@
   (is (= (ev
           "((lit clo nil ((t x (lit clo nil (x) (id t x)))) 'hello) nil)")
          '(err (quote . mistype))))
-
+  (ev "(id t t t)")
   (is (= (ev "1") 1))
   (is (= (ev "(+ 1 2.0)") 3.0))
   (is (= (ev "(num< 2 3)") 't))
   (is (= (ev "(abs -4)") 4))
   (is (= (ev "(+ 0.05 (/ 19 20))") 1.0))
   (is (= (ev "(int? 1)") 't))
-  (is (number? (ev "(hash \\bel)"))))
+  (is (number? (ev "(hash \\bel)")))
+  (is (= (ev "(set x 'a)" "(where x)")
+         '((x . a) d)))
+  (is (= (ev "(where (car '(a b)))")
+         '((a b) a)))
+  (is (= (ev "(where (cdr '(a b)))")
+         '((a b) d))))

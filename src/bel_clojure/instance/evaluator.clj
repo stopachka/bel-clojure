@@ -37,16 +37,21 @@
     (when (not= v m/bel-nil) v)))
 
 (defn get-variable [{:keys [dyn scope globe]} form]
-  (cond
-    (#{m/bel-nil m/bel-t m/bel-o m/bel-apply} form) form
-    (= m/bel-globe form) globe
-    (= m/bel-scope form) scope
-    (= m/bel-vmark-sym form) m/bel-vmark
-    :else
-    (let [v (->> [dyn scope globe]
-                 (some (partial find-env-pair form)))]
-      (assert v (format "expected value for variable = %s" form))
-      (m/p-cdr v))))
+  (let [v (->> [dyn scope globe]
+               (some (partial find-env-pair form)))]
+    (assert v (format "expected value for variable = %s" form))
+    v))
+
+(declare in-where?)
+
+(defn bel-eval-variable [es rs env form]
+  (let [v-pair (get-variable env form)]
+    (if (in-where? es)
+      [(drop-lastv es)
+       (conj rs
+             (m/make-pair v-pair (m/make-pair m/bel-d m/bel-nil)))]
+      [es
+       (conj rs (m/p-cdr v-pair))])))
 
 ;; dyn
 ;; ----
@@ -102,8 +107,19 @@
     [env f])
    rs])
 
+
 ;; Env
 ;; -------------
+
+
+(defn in-where? [es]
+  (= (second (last es)) [:where]))
+
+(defn p-where [es rs env x]
+  [(conj es
+         [env [:where]]
+         [env x])
+   rs])
 
 (defn p-err [es rs env e]
   [[] [[:err e]]])
@@ -149,6 +165,7 @@
 (def special-prim-name->fn
   {"dyn" #'p-dyn
    "ccc" #'p-ccc
+   "where" #'p-where
    "err" #'p-err})
 
 (defn make-bel-globe []
@@ -232,23 +249,30 @@
         niled-args (if arglist
                      (map-indexed (fn [i _] (nth args i m/bel-nil)) arglist)
                      args)]
-    (assert (<= (count args) (count niled-args))
-            (format
-             "too many args = %s (%s) niled-args = %s (%s) niled-args"
-             (vec args) (count args) (vec niled-args) (count niled-args)))
     niled-args))
 
-(defn bel-eval-prim-simple [es rs env [_ simple-f]]
+(defn bel-eval-prim-simple [es rs env [_ n simple-f]]
   (let [evaled-args (last rs)
         rest-rs (drop-lastv rs)
         args (m/pair->clojure-seq evaled-args)]
     (try
-      (let [res (apply simple-f
-                       (bel-nil-args simple-f args))]
+      (if (in-where? es)
+        [(drop-lastv es)
+         (conj rs
+               (m/make-pair
+                (m/p-car evaled-args)
+                (m/make-pair
+                 (condp = n
+                   "car" m/bel-a
+                   "cdr" m/bel-d
+                   (throw (Exception. "unexpected use of where")))
+                 m/bel-nil)))]
 
         [es
-         (conj rest-rs res)])
-      (catch Exception e
+         (conj rest-rs
+               (apply simple-f
+                      (bel-nil-args simple-f args)))])
+      (catch Throwable e
         [(conj es [env (m/make-pair
                         m/bel-err-sym
                         (m/make-pair [:clj-err e]
@@ -261,7 +285,7 @@
         special-f (special-prim-name->fn n)]
     (if simple-f
       [(conj es
-             [env [:eval-prim-simple simple-f]]
+             [env [:eval-prim-simple n simple-f]]
              [env [:eval-many-1 args-head]])
        rs]
       (apply special-f
@@ -562,6 +586,7 @@
 ;; bel-eval
 ;; -------------
 
+
 (defn bel-eval-step [es rs]
   (let [top (last es)
         rest-es (drop-lastv es)
@@ -569,6 +594,15 @@
     (cond
       (= t :clj-err)
       [rest-es (conj rs form)]
+
+      (#{m/bel-nil m/bel-t m/bel-o m/bel-apply} form)
+      [rest-es (conj rs form)]
+      (= m/bel-globe form)
+      [rest-es (conj rs (:globe env))]
+      (= m/bel-scope form)
+      [rest-es (conj rs (:scope env))]
+      (= m/bel-vmark-sym form)
+      [rest-es (conj rs m/bel-vmark)]
 
       (= t :char)
       [rest-es (conj rs form)]
@@ -580,7 +614,7 @@
       [rest-es (conj rs form)]
 
       (m/bel-variable? form)
-      [rest-es (conj rs (get-variable env form))]
+      (bel-eval-variable rest-es rs env form)
 
       (= t :pair)
       (bel-eval-pair rest-es rs env form)
