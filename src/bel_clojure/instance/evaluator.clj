@@ -645,7 +645,7 @@
 (defn bel-eval [eval-stack return-stack]
   (loop [es eval-stack
          rs return-stack]
-    (debug-loop es rs)
+    #_(debug-loop es rs)
     (if (empty? es)
       (last rs)
       (let [[new-es new-rs] (bel-eval-step es rs)]
@@ -665,5 +665,6 @@
 (defn eval-all
   [env strs]
   (mapv (fn [s]
+          (println "> " s)
           (bel-eval-single env (r/bel-parse s))) strs))
 
