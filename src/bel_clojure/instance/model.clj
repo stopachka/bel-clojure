@@ -175,7 +175,7 @@
 (defn bel-typecheck? [[_ h]]
   (= bel-t h))
 
-(defn bel-typechcek-var [[_ _h [_ variable]]] variable)
+(defn bel-typecheck-var [[_ _h [_ variable]]] variable)
 
 (defn bel-typecheck-f [[_ _h [_ _variable r]]] (p-car r))
 

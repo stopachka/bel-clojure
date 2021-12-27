@@ -78,4 +78,11 @@
   (is (= (first (ev "(car 'a)")) 'err))
   (is (= (ev
           "(dyn err (lit clo nil (x) 'hello) (car 'a))")
-         'hello)))
+         'hello))
+  (is (=
+       (ev "((lit clo nil ((t x (lit clo nil (x) (id t x)))) 'hello) t)")
+       'hello))
+
+  (is (= (ev
+          "((lit clo nil ((t x (lit clo nil (x) (id t x)))) 'hello) nil)")
+         '(err (quote . mistype)))))

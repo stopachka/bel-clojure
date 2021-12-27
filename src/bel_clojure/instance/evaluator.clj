@@ -255,11 +255,41 @@
 ;; -------------
 ;; bel-eval-clo
 
-(defn bel-assign-vars-optional-arg [es rs env [_ scope var-head]]
+(defn bel-assign-vars-typecheck-2 [es rs env [_ scope variable arg]]
+  (let [check (last rs)
+        rest-rs (drop-lastv rs)]
+    (if (= m/bel-nil check)
+      [(conj es
+             [env (m/make-pair
+                   m/bel-err-sym
+                   (m/make-pair (m/make-pair m/bel-quote
+                                             [:symbol "mistype"])
+                                m/bel-nil))])
+       rs]
+      [(conj es
+             [env
+              [:assign-vars-1
+               scope
+               (m/bel-typecheck-var variable)
+               arg]])
+       rest-rs])))
+
+(defn bel-assign-vars-typecheck-1 [es rs env [_ scope variable arg]]
+  (let [evaled-f (last rs)
+        rest-rs (drop-lastv rs)]
+    [(conj es
+           [env [:assign-vars-typecheck-2 scope variable arg]]
+           [env (m/make-pair
+                 evaled-f
+                 (m/make-pair (m/make-pair m/bel-quote arg)
+                              m/bel-nil))])
+     rest-rs]))
+
+(defn bel-assign-vars-optional-arg [es rs env [_ scope variable]]
   (let [arg-evaled (last rs)
         rest-rs (drop-lastv rs)]
     [(conj es
-           [env [:assign-vars-1 scope var-head arg-evaled]])
+           [env [:assign-vars-1 scope variable arg-evaled]])
      rest-rs]))
 
 (defn bel-assign-vars-rest [es rs env [_ var-head arg-head]]
@@ -289,17 +319,15 @@
              [env (m/bel-optional-arg var-head)])
 
        rs]
-
       [(conj es
              [env [:assign-vars-1
                    scope (m/bel-optional-var var-head) arg-head]])
        rs])
     (m/bel-typecheck? var-head)
-      [(conj es
-             [env [:assign-vars-typecheck-arg scope var-head arg-head]]
-             [env (m/bel-typecheck-f var-head)]
-             )
-       rs]
+    [(conj es
+           [env [:assign-vars-typecheck-1 scope var-head arg-head]]
+           [env (m/bel-typecheck-f var-head)])
+     rs]
     :else
     [(conj es
            [env [:assign-vars-rest
@@ -565,6 +593,12 @@
       (= t :assign-vars-optional-arg)
       (bel-assign-vars-optional-arg rest-es rs env form)
 
+      (= t :assign-vars-typecheck-1)
+      (bel-assign-vars-typecheck-1 rest-es rs env form)
+
+      (= t :assign-vars-typecheck-2)
+      (bel-assign-vars-typecheck-2 rest-es rs env form)
+
       (= t :assign-vars-rest)
       (bel-assign-vars-rest rest-es rs env form)
 
@@ -611,6 +645,7 @@
 (defn bel-eval [eval-stack return-stack]
   (loop [es eval-stack
          rs return-stack]
+    (debug-loop es rs)
     (if (empty? es)
       (last rs)
       (let [[new-es new-rs] (bel-eval-step es rs)]
