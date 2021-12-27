@@ -536,6 +536,13 @@
 
 ===BREAK===
 
+; - just start deleting the bits on streams. see if I can avoid em for now!
+; - create a special “smark”  
+; - use maps for env scope dye
+; - make sure we have a way for things to be able to “be invokable” i.e numbers (vir)
+; - make sure that numbers work with compose: 2:nil 
+; - handle different namecs 
+
 (set cbuf '((nil)))
 
 (def open args
