@@ -46,7 +46,18 @@
     (let [v (->> [dyn scope globe]
                  (some (partial find-env-pair form)))]
       (assert v (format "expected value for variable = %s" form))
-      (m/p-cdr v))))
+      v)))
+
+(declare in-where?)
+
+(defn bel-eval-variable [es rs env form]
+  (let [v-pair (get-variable env form)]
+    (if (in-where? es)
+      [(drop-lastv es)
+       (conj rs
+             (m/make-pair v-pair (m/make-pair m/bel-d m/bel-nil)))]
+      [es
+       (conj rs (m/p-cdr v-pair))])))
 
 ;; dyn
 ;; ----
@@ -102,8 +113,19 @@
     [env f])
    rs])
 
+
 ;; Env
 ;; -------------
+
+
+(defn in-where? [es]
+  (= (second (last es)) [:where]))
+
+(defn p-where [es rs env x]
+  [(conj es
+         [env [:where]]
+         [env x])
+   rs])
 
 (defn p-err [es rs env e]
   [[] [[:err e]]])
@@ -149,6 +171,7 @@
 (def special-prim-name->fn
   {"dyn" #'p-dyn
    "ccc" #'p-ccc
+   "where" #'p-where
    "err" #'p-err})
 
 (defn make-bel-globe []
@@ -238,7 +261,7 @@
              (vec args) (count args) (vec niled-args) (count niled-args)))
     niled-args))
 
-(defn bel-eval-prim-simple [es rs env [_ simple-f]]
+(defn bel-eval-prim-simple [es rs env [_ n simple-f]]
   (let [evaled-args (last rs)
         rest-rs (drop-lastv rs)
         args (m/pair->clojure-seq evaled-args)]
@@ -246,8 +269,18 @@
       (let [res (apply simple-f
                        (bel-nil-args simple-f args))]
 
-        [es
-         (conj rest-rs res)])
+        (if (in-where? es)
+          [(drop-lastv es)
+           (conj rs
+                 (m/make-pair
+                  (m/p-car evaled-args)
+                  (condp = n
+                    "car" m/bel-a
+                    "cdr" m/bel-d
+                    (throw (Exception. "unexpected use of where")))))]
+
+          [es
+           (conj rest-rs res)]))
       (catch Exception e
         [(conj es [env (m/make-pair
                         m/bel-err-sym
@@ -261,7 +294,7 @@
         special-f (special-prim-name->fn n)]
     (if simple-f
       [(conj es
-             [env [:eval-prim-simple simple-f]]
+             [env [:eval-prim-simple n simple-f]]
              [env [:eval-many-1 args-head]])
        rs]
       (apply special-f
@@ -580,7 +613,7 @@
       [rest-es (conj rs form)]
 
       (m/bel-variable? form)
-      [rest-es (conj rs (get-variable env form))]
+      (bel-eval-variable rest-es rs env form)
 
       (= t :pair)
       (bel-eval-pair rest-es rs env form)

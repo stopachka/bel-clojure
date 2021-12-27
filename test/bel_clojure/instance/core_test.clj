@@ -132,26 +132,20 @@
 
   (is (= (ev "(dups \"abracadabra\")") "abr"))
   (is (= (ev "(consif (cadr '(a)) '(x y))") '(x y)))
-  (is (= (ev "(let x 'a (withs (x 'b y x) y))") nil)))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  (is (= (ev "(let x 'a (withs (x 'b y x) y))") 'b))
+  (is (= (ev "(tail [caris _ \\-] \"non-nil\")") "-nil"))
+  (is (= (ev "(dock '(a b c))") '(a b)))
+  (is (= (ev "(lastcdr '(a b c))") '(c)))
+  (is (= (ev "(last '(a b c))") 'c))
+  (is (= (ev "(set x (newq))" "(enq 'a x)" "(enq 'b x)")
+         '((a b))))
+  (is (= (ev "(set x (newq))" "(enq 'a x)" "(enq 'b x)" "(deq x)")
+         'a))
+  (is (= (ev "(set x (newq))" "(enq 'a x)" "(enq 'b x)" "(deq x)" "x")
+         '((b))))
+  (is (= (ev "(let x '(a b c) (zap cdr x) x)") nil))
+  (is (= (ev "(let x 'a (where x))") nil))
+  (is (= (ev "") nil))
+  (is (= (ev "") nil))
+  (is (= (ev "") nil)))
 
