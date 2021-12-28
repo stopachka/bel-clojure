@@ -15,9 +15,10 @@
 ;; Pair Cons
 
 (defn make-pair
-  ([a b] (make-pair :pair a b))
-  ([t a b]
-   (ArrayList. [t a b])))
+  ([a b] (make-pair a b nil))
+  ([a b extra-t]
+   (ArrayList. [(with-meta 'pair
+                           {:extra-t extra-t}) a b])))
 
 ;; ---------
 ;; Constants
@@ -51,18 +52,18 @@
   (make-pair bel-quote a))
 
 (defn <-pairs
-  ([xs] (<-pairs :pair xs))
-  ([t xs]
+  ([xs] (<-pairs xs nil))
+  ([xs extra-t]
    (let [[x n & after-n] xs
          after-x (rest xs)]
      (if (empty? xs)
        bel-nil
        (make-pair
-        t
         x
         (if (= bel-dot n)
           (first-and-only after-n "dotted list _must_ have 1 exp after the dot")
-          (<-pairs t after-x)))))))
+          (<-pairs after-x extra-t))
+        extra-t)))))
 
 (declare p-car p-cdr)
 
@@ -116,7 +117,7 @@
     (= (type x) clojure.lang.PersistentArrayMap) 'imm-map
     :else (symbol (first x))))
 
-(defn bel-pair? [a] (and (seqable? a) (#{:pair :string} (first a))))
+(defn bel-pair? [a] (and (seqable? a) (#{'pair} (first a))))
 
 (def bel-char? string?)
 (def bel-symbol? symbol?)
@@ -181,17 +182,14 @@
 
 (defn bel-string? [a]
   (and (bel-pair? a)
-       (= (first a) :string)))
+     (= (:extra-t (meta (first a))) :string)))
 
 ;; ---------
 ;; Variable
 
 
 (defn bel-variable? [x]
-  (or
-   (bel-symbol? x)
-   (and (bel-pair? x)
-        (= (p-id (p-car x) bel-vmark) bel-t))))
+  (bel-symbol? x))
 
 ;; ---------
 ;; Optional

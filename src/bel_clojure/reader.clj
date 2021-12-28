@@ -29,7 +29,7 @@
   (form-transform
    :string
    (fn [[_t & children]]
-     (m/<-pairs :string (map (fn [[_ v]] (str v)) children)))))
+     (m/<-pairs (map (fn [[_ v]] (str v)) children) :string))))
 
 (def unwrap-name (form-transform :name second))
 
@@ -73,13 +73,13 @@
 
 (defn handle-no [left-xs [r & right-xs]]
   (handle-abbrev-sym
-    (concat left-xs
-          [(m/make-pair
+   (concat left-xs
+           [(m/make-pair
              'compose
              (m/make-pair
               'no
               (m/make-pair r m/bel-nil)))]
-          right-xs)))
+           right-xs)))
 
 (defn handle-col [left-xs right-xs]
   (m/make-pair
@@ -162,17 +162,18 @@
     'splice (list 'spl (bel->pretty-clj (second form)))
     'err (list 'err (bel->pretty-clj (second form)))
     'number form
-    'string
-    (->> form
-           m/pair->clojure-seq
-           (map m/bel-char->clj)
-           cstring/join)
     'pair
     (let [[_ a b] form]
+      (if
+       (m/bel-string? form)
+        (->> form
+             m/pair->clojure-seq
+             (map m/bel-char->clj)
+             cstring/join)
         (concat [(bel->pretty-clj a)]
                 (cond
                   (= m/bel-nil b) nil
                   (m/bel-pair? b) (bel->pretty-clj b)
-                  :else ['. (bel->pretty-clj b)])))
+                  :else ['. (bel->pretty-clj b)]))))
     form))
 

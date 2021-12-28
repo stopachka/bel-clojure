@@ -142,4 +142,3 @@
          '((b))))
   (is (= (ev "(let x '(a b c) (zap cdr x) x)") '(b c)))
   (is (= (ev "(let x '(a b c) (push 'z x) (pull 'c x) x)") '(z a b))))
-
