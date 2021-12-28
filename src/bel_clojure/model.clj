@@ -1,6 +1,7 @@
 (ns bel-clojure.model
   (:require
-   [clojure.string :as cstring])
+   [clojure.string :aj cstring]
+   [bel-clojure.model :as m])
   (:import
    (java.util ArrayList)))
 
@@ -20,25 +21,25 @@
 ;; ---------
 ;; Constants
 
-(def bel-quote [:symbol "quote"])
-(def bel-nil [:symbol "nil"])
-(def bel-t [:symbol "t"])
-(def bel-err-sym [:symbol "err"])
-(def bel-dot [:dot "."])
-(def bel-lit [:symbol "lit"])
-(def bel-prim [:symbol "prim"])
-(def bel-o [:symbol "o"])
-(def bel-a [:symbol "a"])
-(def bel-d [:symbol "d"])
-(def bel-apply [:symbol "apply"])
-(def bel-set [:symbol "set"])
-(def bel-clo [:symbol "clo"])
-(def bel-mac [:symbol "mac"])
-(def bel-globe [:symbol "globe"])
-(def bel-scope [:symbol "scope"])
-(def bel-if [:symbol "if"])
-(def bel-cont [:symbol "cont"])
-(def bel-vmark-sym [:symbol "vmark"])
+(def bel-quote 'qt)
+(def bel-nil (symbol "nil"))
+(def bel-t 't)
+(def bel-err 'err)
+(def bel-dot '.)
+(def bel-lit 'lit)
+(def bel-prim 'prim)
+(def bel-o 'o)
+(def bel-a 'a)
+(def bel-d 'd)
+(def bel-apply 'apply)
+(def bel-set 'set)
+(def bel-clo 'clo)
+(def bel-mac 'mac)
+(def bel-globe 'globe)
+(def bel-scope 'scope)
+(def bel-if 'if)
+(def bel-cont 'cont)
+(def bel-vmark-sym 'vmark)
 
 (defonce bel-vmark (make-pair bel-nil bel-nil))
 
@@ -59,13 +60,13 @@
          (first-and-only after-n "dotted list _must_ have 1 exp after the dot")
          (<-pairs after-x))))))
 
-(defn pair->clojure-seq [[_t l [r-t :as r] :as form]]
+(defn pair->clojure-seq [[_t l r :as form]]
   (if (= bel-nil form)
     ()
     (cons
      l
      (cond
-       (= :pair r-t) (pair->clojure-seq r)
+       (m/bel-pair? r) (pair->clojure-seq r)
        (= bel-nil r) []
        :else [r]))))
 
@@ -95,8 +96,14 @@
     :else
     r))
 
-(defn p-type [[t]]
-  [:symbol (name t)])
+(defn p-type [x]
+  (condp = (type x)
+    clojure.lang.Symbol 'symbol
+    (symbol (first x))))
+
+(defn bel-pair? [a] (and (seqable? a) (= (first a) :pair)))
+(defn bel-char? [a] (and (seqable? a) (= (first a) :char)))
+(defn bel-symbol? [a] (= (type a) clojure.lang.Symbol))
 
 (defn p-xar [form y]
   (.set form 1 y)
@@ -110,19 +117,18 @@
   (let [cs (pair->clojure-seq char-pairs)
         _  (assert (every? (comp (partial = :char) first) cs)
                    "Expected a string")]
-    [:symbol (->> cs (map second) cstring/join)]))
+    (symbol (->> cs (map second) cstring/join))))
 
-(defn p-nom [[t v]]
-  (assert (= t :symbol) "expected symbol")
-  (->> v
+(defn p-nom [x]
+  (->> (name x)
        (map (fn [c] [:char (str c)]))
        <-pairs))
 
 (defn p-coin [] (rand-nth [bel-t bel-nil]))
 
-(defn pair-proper? [[p-t :as p]]
+(defn pair-proper? [p]
   (or (= bel-nil p)
-      (and (= p-t :pair)
+      (and (m/bel-pair? p)
            (pair-proper? (p-cdr p)))))
 
 (defn pair-find [f p]
@@ -156,17 +162,18 @@
 ;; String
 
 (defn bel-string? [a]
-  (and (pair-proper? a)
-       (pair-every? (fn [[t]] (= t :char)) a)))
+  (and (bel-pair? a)
+       (pair-proper? a)
+       (pair-every? bel-char? a)))
 
 ;; ---------
 ;; Variable
 
-(defn bel-variable? [[var-t :as var-head]]
+(defn bel-variable? [x]
   (or
-   (= var-t :symbol)
-   (and (= var-t :pair)
-        (= (p-id (p-car var-head) bel-vmark) bel-t))))
+   (bel-symbol? x)
+   (and (bel-pair? x)
+        (= (p-id (p-car x) bel-vmark) bel-t))))
 
 ;; ---------
 ;; Optional
@@ -189,7 +196,7 @@
 (defn bel-typecheck-f [[_ _h [_ _variable r]]] (p-car r))
 
 ;; -------
-;; Interop 
+;; Interop
 
 (def bel-unwrap second)
 
