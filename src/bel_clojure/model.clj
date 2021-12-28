@@ -102,10 +102,13 @@
     (last form)))
 
 (defn p-type [x]
+  #_(println (type x))
   (cond
     (symbol? x) 'symbol
     (string? x) 'char
     (number? x) 'number
+    (= (type x) java.util.HashMap) 'mut-map
+    (= (type x) clojure.lang.PersistentArrayMap) 'imm-map
     :else (symbol (first x))))
 
 (defn bel-pair? [a] (and (seqable? a) (= (first a) :pair)))
@@ -218,3 +221,29 @@
   (condp = v
     "sp" " "
     v))
+
+;; Maps
+
+(defn map-get [m k]
+  (if (= m bel-nil)
+    bel-nil
+    (or (.get m k) m/bel-nil)))
+
+(defn map-assoc [m k v]
+  (let [m' (if (= bel-nil m) {} m)]
+    (assoc m' k v)))
+
+(defn map-dissoc [m k]
+  (if (= bel-nil m) m/bel-nil
+      (let [m' (dissoc m k)]
+        (if (empty? m') m/bel-nil m'))))
+
+(defn mut-map []
+  (java.util.HashMap.))
+
+(defn map-put [m k v]
+  (.put m k v))
+
+(defn map-delete [m k]
+  (.remove m k))
+

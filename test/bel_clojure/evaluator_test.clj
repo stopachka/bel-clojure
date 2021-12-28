@@ -15,7 +15,7 @@
   (is (= (ev "\\bel") 'c-bel))
   (is (= (ev "\"foo\"") "foo"))
   (is (= (ev "'foo") 'foo))
-  (is (= (ev "(type globe)") 'pair))
+  (is (= (ev "(type globe)") 'mut-map))
   (is (= (ev "(type scope)") 'symbol))
   (is (= (ev "(lit (foo bar baz))") '(lit (foo bar baz))))
   (is (= (ev "car") '(lit prim car)))

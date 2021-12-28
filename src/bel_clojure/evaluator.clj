@@ -11,39 +11,23 @@
 ;; --------
 ;; variable
 
-(defn remove-variable! [var-pair-head sym-to-remove]
-  (cond
-    (= m/bel-nil var-pair-head)
-    m/bel-nil
-
-    (= (m/p-car (m/p-car var-pair-head)) sym-to-remove)
-    (do
-      (m/p-xar var-pair-head
-               (m/p-car (m/p-cdr var-pair-head)))
-      (m/p-xdr var-pair-head
-               (m/p-cdr (m/p-cdr var-pair-head))))
-    :else
-    (remove-variable! (m/p-cdr var-pair-head) sym-to-remove)))
-
 (defn make-env-pair [sym v]
   (assert (m/bel-variable? sym)
           (format "expected left-side to be a variable= %s" sym))
   (m/make-pair sym v))
 
-(defn find-env-pair [to-find pairs]
-  (let [v (some->> pairs
-                   (m/pair-find
-                    (fn [p]
-                      (= m/bel-t (m/p-id to-find (m/p-car p))))))]
-    (when (not= v m/bel-nil) v)))
+(declare in-where?)
+
+(defn not-bel-nil [x]
+  (when-not (= x m/bel-nil) x))
 
 (defn get-variable [{:keys [dyn scope globe]} form]
   (let [v (->> [dyn scope globe]
-               (some (partial find-env-pair form)))]
-    (assert v (format "expected value for variable = %s" form))
+               (some (fn [x]
+                       (not-bel-nil (m/map-get x form)))))]
+    (assert v
+            (format "expected value for variable = %s" form))
     v))
-
-(declare in-where?)
 
 (defn bel-eval-variable [es rs env form]
   (cond
@@ -68,16 +52,14 @@
 ;; dyn
 
 (defn bel-eval-dyn-remove [es rs {:keys [dyn]} [_ variable]]
-  (remove-variable! dyn variable)
+  (m/map-delete dyn variable)
   [es rs])
 
 (defn bel-eval-dyn-2 [es rs env [_ variable after]]
   (let [ev (last rs)
         rest-rs (drop-lastv rs)
-        {:keys [dyn]} env
-        [_ head tail] dyn]
-    (m/p-xar dyn (make-env-pair variable ev))
-    (m/p-xdr dyn (m/make-pair head tail))
+        {:keys [dyn]} env]
+    (m/map-put dyn variable (make-env-pair variable ev))
     [(conj es
            [env [:dyn-remove variable]]
            [env after])
@@ -154,7 +136,7 @@
   (fn [& xs]
     (let [v (apply f xs)]
       (if
-       (number? v) (m/clj-num->bel-num v)
+       (number? v) v
        (m/clj-bool->bel v)))))
 
 (def math-name->fn
@@ -183,8 +165,7 @@
     "nom" #'m/p-nom
     "coin" #'m/p-coin
     "p-debug" #'p-debug
-    "uvar" #'p-uvar
-    }
+    "uvar" #'p-uvar}
    math-name->fn))
 
 ;; -------------
@@ -200,21 +181,25 @@
 ;; Env
 
 (defn make-bel-globe []
-  (->> (merge prim-name->fn special-prim-name->fn)
-       (map (fn [[k]]
-              (let [sym-k (symbol (name k))]
-                (m/make-pair
-                 sym-k
-                 (m/<-pairs [m/bel-lit m/bel-prim sym-k])))))
-       m/<-pairs))
+  (let [m (m/mut-map)]
+    (->> (merge prim-name->fn special-prim-name->fn)
+         (map (fn [[k]]
+                (let [sym-k (symbol (name k))]
+                  (m/map-put
+                   m
+                   sym-k
+                   (m/make-pair
+                    sym-k
+                    (m/<-pairs [m/bel-lit m/bel-prim sym-k]))))))
+         doall)
+    m))
 
 (defn make-env
   ([] (make-env (make-bel-globe)))
   ([g]
    {:globe g
     :scope m/bel-nil
-    :dyn
-    (m/make-pair m/bel-nil m/bel-nil)}))
+    :dyn (m/mut-map)}))
 
 ;; ------------
 ;; bel-eval-if
@@ -249,10 +234,11 @@
 (defn bel-eval-set-2 [es rs {:keys [globe] :as _env} form]
   (let [[_ sym] form
         evaled-v (last rs)
-        rest-rs (drop-lastv rs)
-        [_ head tail] globe]
-    (m/p-xar globe (make-env-pair sym evaled-v))
-    (m/p-xdr globe (m/make-pair head tail))
+        rest-rs (drop-lastv rs)]
+    (m/map-put
+     globe
+     sym
+     (make-env-pair sym evaled-v))
     [es (conj rest-rs)]))
 
 (defn bel-eval-set-1 [es rs env form]
@@ -387,10 +373,12 @@
 
     (m/bel-variable? var-head)
     [es (conj rs
-              (m/make-pair (make-env-pair
-                            var-head
-                            arg-head)
-                           scope))]
+              (m/map-assoc
+               scope
+               var-head
+               (make-env-pair
+                var-head
+                arg-head)))]
 
     (m/bel-optional? var-head)
     (if (= m/bel-nil arg-head)
