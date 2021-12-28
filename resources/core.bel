@@ -387,27 +387,19 @@
                  (and (= (car x) (car y))
                       (< (cdr x) (cdr y))))))
 
-(def bin< args
-  (aif (all no args)                    nil
-       (find [all (car _) args] comfns) (apply (cdr it) args)
-                                        (err 'incomparable)))
-
-(set comfns nil)
-
-(def com (f g)
-  (set comfns (put f g comfns)))
-
 ; stopa-edit
 
-(com number num<)
+(def bin< args
+  (if (all no args) nil
+      (let x (car args)
+           (let f (if (number x) num<
+                      (char x) (of < charn)
+                      (string x) list<
+                      (symbol x) (of list< nom))
+                (apply f args)))))
+
 
 ; /stopa-edit
-
-(com char (of < charn))
-
-(com string list<)
-
-(com symbol (of list< nom))
 
 (def pint (n)
   (and (int? n) (> n 0)))

@@ -81,7 +81,8 @@
 ;; I don't know lf cr sp. Will look deeper on that
 
 (def transform-symbol
-  (form-transform :symbol (fn [[_ v]] (symbol v))))
+  (form-transform :symbol (fn [[_ v]]
+                            (symbol v))))
 
 (def transform-space
   (form-transform :space (fn [_] "sp")))
@@ -103,8 +104,7 @@
    comp->pair
    type-comp->pair
    transform-number
-   unwrap-char
-   ))
+   unwrap-char))
 
 (def bel-parse
   (comp (partial walk/postwalk parse-postwalk) parse-string cstring/trim))

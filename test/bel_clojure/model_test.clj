@@ -36,4 +36,6 @@
 
   (is (= (pretty-f p-sym "\"foo\"") 'foo))
 
-  (is (= (pretty-f p-nom "foo") "foo")))
+  (is (= (pretty-f p-nom "foo") "foo"))
+  (is (= (map-assoc bel-nil 'foo 1) {'foo 1}))
+  (is (= (map-dissoc bel-nil {'foo 1}) bel-nil)))
