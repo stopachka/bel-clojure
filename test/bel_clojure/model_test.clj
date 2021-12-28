@@ -23,7 +23,7 @@
   (is (= (pretty-f p-type "a") 'symbol))
   (is (= (pretty-f p-type "(a b)") 'pair))
   (is (= (pretty-f p-type "\\a") 'char))
-
+  (is (= (pretty-f p-type "\"a\"") 'string))
   (let [p (r/bel-parse "(a . b)")
         c (r/bel-parse "c")]
     (p-xar p c)

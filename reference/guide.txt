@@ -3640,7 +3640,7 @@ expressions directly.
 
 The bquote macro is the biggest in the Bel source, and gives a taste
 of how macros, as they become more powerful, can become like
-compilers.
+compilers.k
 
 The general goal of backquote is to turn an expression containing
 backquotes, commas, and comma-ats into calls to the familiar

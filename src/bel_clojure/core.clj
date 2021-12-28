@@ -22,7 +22,7 @@
 
 (defn bootstrap-env []
   (let [env (e/make-env)]
-    (println "loading readable source...")
+    (println "loading core.bel...")
     (e/eval-all env (readable-source))
     env))
 
