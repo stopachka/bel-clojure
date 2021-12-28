@@ -40,7 +40,6 @@
   (is (= (pretty-parse "i<") 'i<))
   (is (= (pretty-parse "i^") (symbol "i^")))
   (is (= (pretty-parse "a|b") '(t a b)))
-
   (is (= (pretty-parse "1") 1))
   (is (= (pretty-parse "1.05") 1.05))
   (is (= (pretty-parse "-1.05") -1.05))
