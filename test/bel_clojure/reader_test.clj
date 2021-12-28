@@ -4,12 +4,13 @@
    [clojure.test :refer :all]))
 
 (def pretty-parse (comp bel->pretty-clj bel-parse))
+
 (deftest test-reader
   (is (= (pretty-parse "\"str\"") "str"))
   (is (= (pretty-parse "\"hello world\"") "hello world"))
   (is (= (pretty-parse "(a b c)") '(a b c)))
   (is (= (pretty-parse "_") '_))
-  (is (= (pretty-parse "'+") '(quote . +)))
+  (is (= (pretty-parse "'+") '(qt . +)))
   (is (= (pretty-parse "\\bel") 'c-bel))
   (is (= (pretty-parse "(a . b)")
          '(a . b)))

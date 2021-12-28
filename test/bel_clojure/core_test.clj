@@ -83,7 +83,7 @@
   (is (= (ev "((isa 'clo) map)") 't))
   (is (= (ev "(def consa (xs|pair) (cons 'a xs))"
              "(consa 'z)")
-         '(err (quote . mistype))))
+         '(err (qt . mistype))))
   (is (= (ev "(def consa (xs|pair) (cons 'a xs))"
              "(consa '(a b))")
          '(a a b)))

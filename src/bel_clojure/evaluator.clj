@@ -33,7 +33,8 @@
 (defn find-env-pair [to-find pairs]
   (let [v (some->> pairs
                    (m/pair-find
-                    (fn [p] (= m/bel-t (m/p-id to-find (m/p-car p))))))]
+                    (fn [p]
+                      (= m/bel-t (m/p-id to-find (m/p-car p))))))]
     (when (not= v m/bel-nil) v)))
 
 (defn get-variable [{:keys [dyn scope globe]} form]
@@ -195,9 +196,10 @@
 (defn make-bel-globe []
   (->> (merge prim-name->fn special-prim-name->fn)
        (map (fn [[k]]
-              (m/make-pair
-               [:symbol k]
-               (m/<-pairs [m/bel-lit m/bel-prim [:symbol k]]))))
+              (let [sym-k (symbol (name k))]
+                (m/make-pair
+                 sym-k
+                 (m/<-pairs [m/bel-lit m/bel-prim sym-k])))))
        m/<-pairs))
 
 (defn make-env
@@ -245,7 +247,7 @@
         [_ head tail] globe]
     (m/p-xar globe (make-env-pair sym evaled-v))
     (m/p-xdr globe (m/make-pair head tail))
-    [es rest-rs]))
+    [es (conj rest-rs)]))
 
 (defn bel-eval-set-1 [es rs env form]
   (let [[_ sym after-sym] form
@@ -312,7 +314,7 @@
          rest-rs]))))
 
 (defn bel-eval-prim [es rs env litv args-head]
-  (let [[_ [_ n]] litv
+  (let [n (name (m/p-car litv))
         simple-f (prim-name->fn n)
         special-f (special-prim-name->fn n)]
     (if simple-f
@@ -336,8 +338,7 @@
       [(conj es
              [env (m/make-pair
                    m/bel-err-sym
-                   (m/make-pair (m/make-pair m/bel-quote
-                                             [:symbol "mistype"])
+                   (m/make-pair (m/make-pair m/bel-quote 'mistype)
                                 m/bel-nil))])
        rs]
       [(conj es
@@ -583,46 +584,53 @@
        h
        r-evaled))]))
 
-(defn bel-eval-backquote [es rs env [_ [t [h-t :as h] r :as form]]]
-  (cond
-    (= t :comma)
-    [(conj es [env h])
-     rs]
-    (not= t :pair)
-    [es (conj rs form)]
-    (= h-t :comma)
-    [(conj
-      es
-      [env [:eval-bq-comma-1]]
-      [env (second h)]
-      [env [:backquote r]])
-     rs]
-    (= h-t :splice)
-    [(conj
-      es
-      [env [:eval-bq-splice-1]]
-      [env (second h)]
-      [env [:backquote r]])
-     rs]
-    (= h-t :pair)
-    [(conj es
-           [env [:eval-bq-pair-1]]
-           [env [:backquote h]]
-           [env [:backquote r]])
-     rs]
-    :else
-    [(conj es
-           [env [:eval-bq-rest-1 h]]
-           [env [:backquote r]])
-     rs]))
+(defn bel-eval-backquote [es rs env [_ form]]
+  (let [t (m/p-type form)]
+    (cond
+      (= t 'comma)
+      [(conj es [env (second form)])
+       rs]
+
+      (not= t 'pair)
+      [es (conj rs form)]
+
+      :else
+      (let [[_ h r] form
+            h-t (m/p-type h)]
+        (cond
+          (= h-t 'comma)
+          [(conj
+            es
+            [env [:eval-bq-comma-1]]
+            [env (second h)]
+            [env [:backquote r]])
+           rs]
+          (= h-t 'splice)
+          [(conj
+            es
+            [env [:eval-bq-splice-1]]
+            [env (second h)]
+            [env [:backquote r]])
+           rs]
+          (= h-t 'pair)
+          [(conj es
+                 [env [:eval-bq-pair-1]]
+                 [env [:backquote h]]
+                 [env [:backquote r]])
+           rs]
+          :else
+          [(conj es
+                 [env [:eval-bq-rest-1 h]]
+                 [env [:backquote r]])
+           rs])))))
 
 ;; --------
 ;; bel-eval
 
-(defn literal? [[t a :as form]]
-  (or (#{:clj-err :char :number} t)
+(defn literal? [form]
+  (or (#{'clj-err 'char 'number} (m/p-type form))
       (#{m/bel-nil m/bel-t m/bel-o m/bel-apply} form)
-      (and (= t :pair) (#{m/bel-lit} a))
+      (and (m/bel-pair? form) (#{m/bel-lit} (m/p-car form)))
       (m/bel-string? form)))
 
 (def step->fn
@@ -654,7 +662,7 @@
 (defn bel-eval-step [es rs]
   (let [top (last es)
         rest-es (drop-lastv es)
-        [env [t :as form]] top]
+        [env form] top]
     (cond
       (literal? form)
       [rest-es (conj rs form)]
@@ -663,7 +671,7 @@
       (bel-eval-variable rest-es rs env form)
 
       :else
-      (let [f (step->fn t)]
+      (let [f (step->fn (first form))]
         (f rest-es rs env form)))))
 
 (defn debug-loop [es rs]
@@ -677,7 +685,7 @@
   (loop [es eval-stack
          rs return-stack]
     (if (empty? es)
-      (last rs)
+      (or (last rs) m/bel-nil)
       (let [[new-es new-rs] (bel-eval-step es rs)]
         (recur new-es new-rs)))))
 
