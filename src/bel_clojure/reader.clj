@@ -28,7 +28,7 @@
   (form-transform
    :string
    (fn [[_t & children]]
-     (m/<-pairs (map (fn [[_ v]] [:char v]) children)))))
+     (m/<-pairs (map (fn [[_ v]] (str v)) children)))))
 
 (def unwrap-name (form-transform :name second))
 
@@ -74,8 +74,7 @@
 
 (def transform-number
   (form-transform :number
-                  (fn [[_ v]]
-                    [:number (edn/read-string v)])))
+                  (fn [[_ v]] (edn/read-string v))))
 
 ;; TODO: Right now, I only handle "sp"
 ;; We also want to handle tab, lf, cr, sp
@@ -86,6 +85,8 @@
 
 (def transform-space
   (form-transform :space (fn [_] "sp")))
+
+(def unwrap-char (form-transform :char second))
 
 (def parse-string (-> "bel.ebnf" io/resource insta/parser))
 
@@ -101,7 +102,9 @@
    abbrev-fn->pair
    comp->pair
    type-comp->pair
-   transform-number))
+   transform-number
+   unwrap-char
+   ))
 
 (def bel-parse
   (comp (partial walk/postwalk parse-postwalk) parse-string cstring/trim))
@@ -112,12 +115,12 @@
 (defn bel->pretty-clj [form]
   (condp = (m/p-type form)
     'symbol (if (= m/bel-nil form) nil form)
-    'char (symbol (str "c-" (second form)))
+    'char (symbol (str "c-" form))
     'backquote (list 'bq (bel->pretty-clj (second form)))
     'comma (list 'cm (bel->pretty-clj (second form)))
     'splice (list 'spl (bel->pretty-clj (second form)))
     'err (list 'err (bel->pretty-clj (second form)))
-    'number (second form)
+    'number form
     'pair
     (if (m/bel-string? form)
       (->> form
