@@ -509,11 +509,11 @@
 ;; bel-eval-pair
 
 (defn bel-eval-pair [es rs env [_ l r :as form]]
-  (cond
-    (= m/bel-quote l) [es (conj rs r)]
-    (= m/bel-set l) (bel-eval-set-1 es rs env r)
-    (= m/bel-if l) (bel-eval-if-1 es rs env r)
-    (= m/bel-apply l) (bel-eval-apply-1 es rs env r)
+  (condp = l
+    m/bel-quote [es (conj rs r)]
+    m/bel-set (bel-eval-set-1 es rs env r)
+    m/bel-if (bel-eval-if-1 es rs env r)
+    m/bel-apply (bel-eval-apply-1 es rs env r)
     :else (bel-eval-application-1 es rs env form)))
 
 ;; ------------------
