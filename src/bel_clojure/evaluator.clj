@@ -171,7 +171,7 @@
    math-name->fn))
 
 ;; -------------
-;; special-prims 
+;; special-prims
 
 (def special-prim-name->fn
   {"dyn" #'p-dyn
@@ -180,7 +180,7 @@
    "err" #'p-err})
 
 ;; ---
-;; Env 
+;; Env
 
 (defn make-bel-globe []
   (->> (merge prim-name->fn special-prim-name->fn)
@@ -401,7 +401,7 @@
      rs]))
 
 ;; -----
-;; bel-eval-clo 
+;; bel-eval-clo
 
 (defn bel-eval-clo-2 [es rs env [_ body-head]]
   (let [scope (last rs)
@@ -721,7 +721,7 @@
 (defn bel-eval [eval-stack return-stack]
   (loop [es eval-stack
          rs return-stack]
-    #_(debug-loop es rs)
+    (debug-loop es rs)
     (if (empty? es)
       (last rs)
       (let [[new-es new-rs] (bel-eval-step es rs)]
