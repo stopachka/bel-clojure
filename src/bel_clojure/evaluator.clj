@@ -45,13 +45,23 @@
 (declare in-where?)
 
 (defn bel-eval-variable [es rs env form]
-  (let [v-pair (get-variable env form)]
-    (if (in-where? es)
-      [(drop-lastv es)
-       (conj rs
-             (m/make-pair v-pair (m/make-pair m/bel-d m/bel-nil)))]
-      [es
-       (conj rs (m/p-cdr v-pair))])))
+  (cond
+    (= m/bel-globe form)
+    [es (conj rs (:globe env))]
+
+    (= m/bel-scope form)
+    [es (conj rs (:scope env))]
+
+    (= m/bel-vmark-sym form)
+    [es (conj rs m/bel-vmark)]
+    :else
+    (let [v-pair (get-variable env form)]
+      (if (in-where? es)
+        [(drop-lastv es)
+         (conj rs
+               (m/make-pair v-pair (m/make-pair m/bel-d m/bel-nil)))]
+        [es
+         (conj rs (m/p-cdr v-pair))]))))
 
 ;; ----
 ;; dyn
@@ -525,7 +535,6 @@
 (defn bel-eval-pair [es rs env [_ l r :as form]]
   (cond
     (= m/bel-quote l) [es (conj rs r)]
-    (= m/bel-lit l) [es (conj rs form)]
     (= m/bel-set l) (bel-eval-set-1 es rs env r)
     (= m/bel-if l) (bel-eval-if-1 es rs env r)
     (= m/bel-apply l) (bel-eval-apply-1 es rs env r)
@@ -610,106 +619,52 @@
 ;; --------
 ;; bel-eval
 
+(defn literal? [[t a :as form]]
+  (or (#{:clj-err :char :number} t)
+      (#{m/bel-nil m/bel-t m/bel-o m/bel-apply} form)
+      (and (= t :pair) (#{m/bel-lit} a))
+      (m/bel-string? form)))
+
+(def step->fn
+  {:pair bel-eval-pair
+   :set-2 bel-eval-set-2
+   :if-2 bel-eval-if-2
+   :application-2 bel-eval-application-2
+   :eval-many-1 bel-eval-many-1
+   :eval-many-2 bel-eval-many-2
+   :eval-lit-1 bel-eval-lit-1
+   :eval-prim-simple bel-eval-prim-simple
+   :eval-mac-2 bel-eval-mac-2
+   :assign-vars-1 bel-assign-vars-1
+   :assign-vars-optional-arg bel-assign-vars-optional-arg
+   :assign-vars-typecheck-1 bel-assign-vars-typecheck-1
+   :assign-vars-typecheck-2 bel-assign-vars-typecheck-2
+   :assign-vars-rest bel-assign-vars-rest
+   :eval-clo-2 bel-eval-clo-2
+   :dyn-2 bel-eval-dyn-2
+   :dyn-remove bel-eval-dyn-remove
+   :ccc-2 bel-eval-ccc-2
+   :backquote bel-eval-backquote
+   :eval-bq-comma-1 bel-eval-bq-comma-1
+   :eval-bq-splice-1 bel-eval-bq-splice-1
+   :eval-bq-pair-1 bel-eval-bq-pair-1
+   :eval-bq-rest-1 bel-eval-bq-rest-1
+   :eval-apply-2 bel-eval-apply-2})
+
 (defn bel-eval-step [es rs]
   (let [top (last es)
         rest-es (drop-lastv es)
         [env [t :as form]] top]
     (cond
-      (= t :clj-err)
-      [rest-es (conj rs form)]
-
-      (#{m/bel-nil m/bel-t m/bel-o m/bel-apply} form)
-      [rest-es (conj rs form)]
-      (= m/bel-globe form)
-      [rest-es (conj rs (:globe env))]
-      (= m/bel-scope form)
-      [rest-es (conj rs (:scope env))]
-      (= m/bel-vmark-sym form)
-      [rest-es (conj rs m/bel-vmark)]
-
-      (= t :char)
-      [rest-es (conj rs form)]
-
-      (= t :number)
-      [rest-es (conj rs form)]
-
-      (m/bel-string? form)
+      (literal? form)
       [rest-es (conj rs form)]
 
       (m/bel-variable? form)
       (bel-eval-variable rest-es rs env form)
 
-      (= t :pair)
-      (bel-eval-pair rest-es rs env form)
-
-      (= t :set-2)
-      (bel-eval-set-2 rest-es rs env form)
-
-      (= t :if-2)
-      (bel-eval-if-2 rest-es rs env form)
-
-      (= t :application-2)
-      (bel-eval-application-2 rest-es rs env form)
-
-      (= t :eval-many-1)
-      (bel-eval-many-1 rest-es rs env form)
-
-      (= t :eval-many-2)
-      (bel-eval-many-2 rest-es rs env form)
-
-      (= t :eval-lit-1)
-      (bel-eval-lit-1 rest-es rs env form)
-
-      (= t :eval-prim-simple)
-      (bel-eval-prim-simple rest-es rs env form)
-
-      (= t :eval-mac-2)
-      (bel-eval-mac-2 rest-es rs env form)
-
-      (= t :assign-vars-1)
-      (bel-assign-vars-1 rest-es rs env form)
-
-      (= t :assign-vars-optional-arg)
-      (bel-assign-vars-optional-arg rest-es rs env form)
-
-      (= t :assign-vars-typecheck-1)
-      (bel-assign-vars-typecheck-1 rest-es rs env form)
-
-      (= t :assign-vars-typecheck-2)
-      (bel-assign-vars-typecheck-2 rest-es rs env form)
-
-      (= t :assign-vars-rest)
-      (bel-assign-vars-rest rest-es rs env form)
-
-      (= t :eval-clo-2)
-      (bel-eval-clo-2 rest-es rs env form)
-
-      (= t :dyn-2)
-      (bel-eval-dyn-2 rest-es rs env form)
-
-      (= t :dyn-remove)
-      (bel-eval-dyn-remove rest-es rs env form)
-
-      (= t :ccc-2)
-      (bel-eval-ccc-2 rest-es rs env form)
-
-      (= t :backquote)
-      (bel-eval-backquote rest-es rs env form)
-
-      (= t :eval-bq-comma-1)
-      (bel-eval-bq-comma-1 rest-es rs env form)
-
-      (= t :eval-bq-splice-1)
-      (bel-eval-bq-splice-1 rest-es rs env form)
-
-      (= t :eval-bq-pair-1)
-      (bel-eval-bq-pair-1 rest-es rs env form)
-
-      (= t :eval-bq-rest-1)
-      (bel-eval-bq-rest-1 rest-es rs env form)
-
-      (= t :eval-apply-2)
-      (bel-eval-apply-2 rest-es rs env form))))
+      :else
+      (let [f (step->fn t)]
+        (f rest-es rs env form)))))
 
 (defn debug-loop [es rs]
   (println "in:")
@@ -721,7 +676,6 @@
 (defn bel-eval [eval-stack return-stack]
   (loop [es eval-stack
          rs return-stack]
-    #_(debug-loop es rs)
     (if (empty? es)
       (last rs)
       (let [[new-es new-rs] (bel-eval-step es rs)]
