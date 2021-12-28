@@ -143,6 +143,11 @@
   [x] (println "[DEBUG] " (r/bel->pretty-clj x)))
 
 ;; ----
+;; uvar
+
+(def p-uvar gensym)
+
+;; ----
 ;; math
 
 (defn wrap-math-fn [f]
@@ -178,7 +183,9 @@
     "sym" #'m/p-sym
     "nom" #'m/p-nom
     "coin" #'m/p-coin
-    "p-debug" #'p-debug}
+    "p-debug" #'p-debug
+    "uvar" #'p-uvar
+    }
    math-name->fn))
 
 ;; -------------

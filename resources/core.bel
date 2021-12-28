@@ -97,9 +97,6 @@
       `(list 'lit 'clo scope ',parms ',(car body))
       `(list 'lit 'clo scope ',parms '(do ,@body))))
 
-(def uvar ()
-  (list vmark))
-
 (mac do args
   (reduce (fn (x y)
             (list (list 'fn (uvar) y) x))
@@ -272,9 +269,7 @@
       (string e)))
 
 (def variable (e)
-  (if (atom e)
-      (no (literal e))
-      (id (car e) vmark)))
+  (and (atom e) (no (literal e))))
 
 (def isa (name)
   [begins _ `(lit ,name) id])
