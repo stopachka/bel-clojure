@@ -1,6 +1,6 @@
 (ns bel-clojure.instance.reader-test
   (:require
-   [bel-clojure.instance.reader :refer :all]
+   [bel-clojure.reader :refer :all]
    [clojure.test :refer :all]))
 
 (def pretty-parse (comp bel->pretty-clj bel-parse))

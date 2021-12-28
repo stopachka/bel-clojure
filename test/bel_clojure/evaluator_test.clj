@@ -1,9 +1,9 @@
-(ns bel-clojure.instance.evaluator-test
+(ns bel-clojure.evaluator-test
   (:require
-   [bel-clojure.instance.reader :as r]
-   [bel-clojure.instance.evaluator :refer :all]
+   [bel-clojure.reader :as r]
+   [bel-clojure.evaluator :refer :all]
    [clojure.test :refer :all]
-   [bel-clojure.instance.model :as m]))
+   [bel-clojure.model :as m]))
 
 (defn ev-all [env strs]
   (mapv r/bel->pretty-clj (eval-all env strs)))

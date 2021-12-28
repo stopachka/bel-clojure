@@ -1,11 +1,11 @@
-(ns bel-clojure.instance.reader
+(ns bel-clojure.reader
   (:require
    [clojure.java.io :as io]
    [instaparse.core :as insta]
    [clojure.walk :as walk]
-   [bel-clojure.instance.model :as m]
    [clojure.string :as cstring]
-   [clojure.edn :as edn]))
+   [clojure.edn :as edn]
+   [bel-clojure.model :as m]))
 
 (defn form-transform
   [k f]

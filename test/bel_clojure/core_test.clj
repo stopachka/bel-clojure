@@ -1,8 +1,8 @@
-(ns bel-clojure.instance.core-test
+(ns bel-clojure.core-test
   (:require
-   [bel-clojure.instance.reader :as r]
-   [bel-clojure.instance.evaluator :as e]
-   [bel-clojure.instance.core :refer :all]
+   [bel-clojure.reader :as r]
+   [bel-clojure.evaluator :as e]
+   [bel-clojure.core :refer :all]
    [clojure.test :refer :all]))
 
 (def env (delay (bootstrap-env)))

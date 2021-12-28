@@ -1,7 +1,7 @@
 (ns bel-clojure.instance.model-test
   (:require
-   [bel-clojure.instance.reader :as r]
-   [bel-clojure.instance.model :refer :all]
+   [bel-clojure.reader :as r]
+   [bel-clojure.model :refer :all]
    [clojure.test :refer :all]))
 
 (defn pretty-f [f & args]
