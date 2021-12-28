@@ -57,10 +57,10 @@
                   (fn [[_ & xs]]
                     (<-compose
                      (reduce
-                      (fn [ret [t r :as x]]
+                      (fn [ret x]
                         (into ret
-                              (if (= t :no_comp)
-                                ['no r]
+                              (if (and (seqable? x) (= (first x) :no_comp))
+                                ['no (second x)]
                                 [x])))
                       []
                       xs)))))
@@ -129,6 +129,7 @@
                 (cond
                   (= m/bel-nil b) nil
                   (m/bel-pair? b) (bel->pretty-clj b)
-                  :else ['. (bel->pretty-clj b)]))))))
+                  :else ['. (bel->pretty-clj b)]))))
+    form))
 
 

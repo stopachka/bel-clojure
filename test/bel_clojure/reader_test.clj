@@ -4,6 +4,7 @@
    [clojure.test :refer :all]))
 
 (def pretty-parse (comp bel->pretty-clj bel-parse))
+
 (deftest test-reader
   (is (= (pretty-parse "\"str\"") "str"))
   (is (= (pretty-parse "\"hello world\"") "hello world"))

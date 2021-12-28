@@ -24,8 +24,8 @@
 (def bel-quote 'qt)
 (def bel-nil (symbol "nil"))
 (def bel-t 't)
-(def bel-err 'err)
-(def bel-dot '.)
+(def bel-err-sym 'err)
+(def bel-dot [:dot "."])
 (def bel-lit 'lit)
 (def bel-prim 'prim)
 (def bel-o 'o)
@@ -60,41 +60,46 @@
          (first-and-only after-n "dotted list _must_ have 1 exp after the dot")
          (<-pairs after-x))))))
 
-(defn pair->clojure-seq [[_t l r :as form]]
+(declare p-car p-cdr)
+
+(defn pair->clojure-seq [form]
   (if (= bel-nil form)
     ()
     (cons
-     l
-     (cond
-       (m/bel-pair? r) (pair->clojure-seq r)
-       (= bel-nil r) []
-       :else [r]))))
+     (p-car form)
+     (let [r (p-cdr form)]
+       (cond
+         (m/bel-pair? r) (pair->clojure-seq r)
+         (= bel-nil r) []
+         :else [r])))))
 
-(defn p-id [[t-a :as a] b]
-  (let [id-f (if (= t-a :pair) identical? =)]
+(declare bel-pair?)
+
+(defn p-id [a b]
+  (let [id-f (if (bel-pair? a) identical? =)]
     (if (id-f a b) bel-t bel-nil)))
 
 (defn p-join [a b] (make-pair a b))
 
-(defn p-car [[t l _r :as form]]
+(defn p-car [form]
   (cond
     (= bel-nil form) form
 
-    (not= :pair t)
+    (not (bel-pair? form))
     (throw (Exception. (format "expected pair, got = %s" form)))
 
     :else
-    l))
+    (second form)))
 
-(defn p-cdr [[t _l r :as form]]
+(defn p-cdr [form]
   (cond
     (= bel-nil form) form
 
-    (not= :pair t)
+    (not (bel-pair? form))
     (throw (Exception. (format "expected pair, got = %s" form)))
 
     :else
-    r))
+    (last form)))
 
 (defn p-type [x]
   (condp = (type x)

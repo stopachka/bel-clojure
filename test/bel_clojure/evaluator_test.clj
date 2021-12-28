@@ -47,7 +47,7 @@
           "(no nil)")
          't))
   (is (= (ev "(set a 'foo b '(bar baz))" "`(foo ',a ,@b)")
-         '(foo (quote . foo) bar baz)))
+         '(foo (qt . foo) bar baz)))
   (is (= (ev "(set x 'a)" "`(x ,x y)")
          '(x a y)))
   (is (= (ev "(set x 'a)" "`(x ,x y ,(id 'a 'a))")
@@ -75,8 +75,7 @@
        'hello))
   (is (= (ev
           "((lit clo nil ((t x (lit clo nil (x) (id t x)))) 'hello) nil)")
-         '(err (quote . mistype))))
-  (ev "(id t t t)")
+         '(err (qt . mistype))))
   (is (= (ev "1") 1))
   (is (= (ev "(+ 1 2.0)") 3.0))
   (is (= (ev "(num< 2 3)") 't))
