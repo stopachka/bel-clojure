@@ -1,4 +1,4 @@
-(ns bel-clojure.instance.model
+(ns bel-clojure.model
   (:require
    [clojure.string :as cstring])
   (:import
@@ -42,7 +42,7 @@
 
 (defonce bel-vmark (make-pair bel-nil bel-nil))
 
-;; ----
+;; -------------
 ;; Pair Helpers
 
 (defn make-quoted-pair [a]
@@ -88,10 +88,6 @@
 (defn p-cdr [[t _l r :as form]]
   (cond
     (= bel-nil form) form
-
-
-
-
 
     (not= :pair t)
     (throw (Exception. (format "expected pair, got = %s" form)))
@@ -156,15 +152,24 @@
       (and (f (p-car p))
            (pair-every? f (p-cdr p)))))
 
+;; -------
+;; String
+
 (defn bel-string? [a]
   (and (pair-proper? a)
        (pair-every? (fn [[t]] (= t :char)) a)))
+
+;; ---------
+;; Variable
 
 (defn bel-variable? [[var-t :as var-head]]
   (or
    (= var-t :symbol)
    (and (= var-t :pair)
         (= (p-id (p-car var-head) bel-vmark) bel-t))))
+
+;; ---------
+;; Optional
 
 (defn bel-optional? [[_ h]]
   (= bel-o h))
@@ -173,6 +178,9 @@
 
 (defn bel-optional-arg [[_ _h [_ _variable r]]] (p-car r))
 
+;; ---------
+;; Typecheck
+
 (defn bel-typecheck? [[_ h]]
   (= bel-t h))
 
@@ -180,8 +188,13 @@
 
 (defn bel-typecheck-f [[_ _h [_ _variable r]]] (p-car r))
 
+;; -------
+;; Interop 
+
 (def bel-unwrap second)
+
 (defn clj-num->bel-num  [x] [:number x])
+
 (defn clj-bool->bel [x] (if x bel-t bel-nil))
 
 (defn bel-char->clj [[_ v]]

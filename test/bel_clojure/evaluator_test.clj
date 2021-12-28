@@ -1,9 +1,8 @@
-(ns bel-clojure.instance.evaluator-test
+(ns bel-clojure.evaluator-test
   (:require
-   [bel-clojure.instance.reader :as r]
-   [bel-clojure.instance.evaluator :refer :all]
-   [clojure.test :refer :all]
-   [bel-clojure.instance.model :as m]))
+   [bel-clojure.reader :as r]
+   [bel-clojure.evaluator :refer :all]
+   [clojure.test :refer :all]))
 
 (defn ev-all [env strs]
   (mapv r/bel->pretty-clj (eval-all env strs)))
@@ -41,49 +40,39 @@
          nil))
   (is (= (ev "((lit clo nil (x (o y 'b)) y) 'a)")
          'b))
-
   (is (= (ev
           ;; see source.bel
           "(set def (lit mac (lit clo nil (n p e) (join 'set (join n (join (join 'lit (join 'clo (join nil (join p (join e nil))))) nil))))))"
           "(def no (x) (id x nil))"
           "(no nil)")
          't))
-
   (is (= (ev "(set a 'foo b '(bar baz))" "`(foo ',a ,@b)")
          '(foo (quote . foo) bar baz)))
-
   (is (= (ev "(set x 'a)" "`(x ,x y)")
          '(x a y)))
-
   (is (= (ev "(set x 'a)" "`(x ,x y ,(id 'a 'a))")
          '(x a y t)))
-
   (is (= (ev "(set y '(c d))" "`(a b ,@y e f)")
          '(a b c d e f)))
-
   (is (= (take-last 2 (ev-all (make-env)
                               ["(set x 'a)"
                                "x"
                                "(dyn x 'z (join x 'b))"
                                "x"]))
          '((z . b) a)))
-
   (is (= (take-last 2 (ev-all (make-env)
                               ["(join 'a (ccc (lit clo nil (c) (set cont c))))"
                                "(cont 'b)"
                                "(cont 'c)"]))
          '((a . b) (a . c))))
-
   (is (= (ev "(err \"something\")")
          '(err "something")))
   (is (= (first (ev "(car 'a)")) 'err))
   (is (= (ev
           "(dyn err (lit clo nil (x) 'hello) (car 'a))")
          'hello))
-  (is (=
-       (ev "((lit clo nil ((t x (lit clo nil (x) (id t x)))) 'hello) t)")
+  (is (= (ev "((lit clo nil ((t x (lit clo nil (x) (id t x)))) 'hello) t)")
        'hello))
-
   (is (= (ev
           "((lit clo nil ((t x (lit clo nil (x) (id t x)))) 'hello) nil)")
          '(err (quote . mistype))))

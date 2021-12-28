@@ -1,10 +1,10 @@
-(ns bel-clojure.instance.core
+(ns bel-clojure.core
   (:require
    [clojure.java.io :as io]
    [clojure.string :as cstring]
-   [bel-clojure.instance.evaluator :as e]))
+   [bel-clojure.evaluator :as e]))
 
-;; ------
+;; ---------
 ;; Bootstrap
 
 (defn readable-source []

@@ -1,8 +1,8 @@
-(ns bel-clojure.instance.core-test
+(ns bel-clojure.core-test
   (:require
-   [bel-clojure.instance.reader :as r]
-   [bel-clojure.instance.evaluator :as e]
-   [bel-clojure.instance.core :refer :all]
+   [bel-clojure.reader :as r]
+   [bel-clojure.evaluator :as e]
+   [bel-clojure.core :refer :all]
    [clojure.test :refer :all]))
 
 (def env (delay (bootstrap-env)))
@@ -90,10 +90,9 @@
   (is (= (ev "(def foo ((o (t (x . y) [caris _ 'a]) '(a . b))) x)"
              "(foo '(b b))")
          '(err (quote . mistype))))
-  (is (=
-       (ev "(def foo ((o (t (x . y) [caris _ 'a]) '(a . b))) x)"
-           "(foo)")
-       'a))
+  (is (= (ev "(def foo ((o (t (x . y) [caris _ 'a]) '(a . b))) x)"
+             "(foo)")
+         'a))
   (is (= (ev "((fn (x (o y x)) y) 'a)") 'a))
   (is (= (ev "((fn (f x|f) x) pair 'a)")
          '(err (quote . mistype))))
@@ -104,7 +103,7 @@
          '(t nil nil)))
   (is (= (ev "(map ((combine and) car cdr) '((a . nil) (a . b) (nil . b)))")
          '(nil b nil)))
-  (is (= (ev "((cand pair cdr) '(a b))") 'b))
+  (is (= (ev "((cand pair cdr) '(a b))") '(b)))
   (is (= (ev "((cor char pair) 'a)") nil))
   (is (= (ev "(foldl cons nil '(a b))") '(b a)))
   (is (= (ev "(foldr cons nil '(a b))") '(a b)))
@@ -144,9 +143,5 @@
   (is (= (ev "(set x (newq))" "(enq 'a x)" "(enq 'b x)" "(deq x)" "x")
          '((b))))
   (is (= (ev "(let x '(a b c) (zap cdr x) x)") '(b c)))
-  (is (= (ev "(let x '(a b c) (push 'z x) (pull 'c x) x)") '(z a b)))
-
-  ;; broken: to investigate soon!
-  (is (= (ev "(let x '(1 2 3) (++ (car x) 10) x)") '(z a b)))
-  )
+  (is (= (ev "(let x '(a b c) (push 'z x) (pull 'c x) x)") '(z a b))))
 

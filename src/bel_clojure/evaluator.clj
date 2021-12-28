@@ -1,15 +1,15 @@
-(ns bel-clojure.instance.evaluator
+(ns bel-clojure.evaluator
   (:require
-   [bel-clojure.instance.model :as m]
-   [bel-clojure.instance.reader :as r]))
+   [bel-clojure.model :as m]
+   [bel-clojure.reader :as r]))
 
+;; ----
 ;; Misc
-;; -------------
 
 (def drop-lastv (comp vec drop-last))
 
+;; --------
 ;; variable
-;; ---------
 
 (defn remove-variable! [var-pair-head sym-to-remove]
   (cond
@@ -53,8 +53,8 @@
       [es
        (conj rs (m/p-cdr v-pair))])))
 
-;; dyn
 ;; ----
+;; dyn
 
 (defn bel-eval-dyn-remove [es rs {:keys [dyn]} [_ variable]]
   (remove-variable! dyn variable)
@@ -79,8 +79,8 @@
     [env arg])
    rs])
 
-;; p-ccc
 ;; ----
+;; ccc
 
 (defn bel-eval-cont [_es _rs _env litv args-head]
   (let [[_ f] litv
@@ -107,10 +107,8 @@
     [env f])
    rs])
 
-
-;; Env
-;; -------------
-
+;; ------
+;; where
 
 (defn in-where? [es]
   (= (second (last es)) [:where]))
@@ -121,14 +119,20 @@
          [env x])
    rs])
 
+;; ---
+;; err
+
 (defn p-err [es rs env e]
   [[] [[:err e]]])
 
+;; -------
+;; debug
+
 (defn p-debug
-  "Note, this is not necessary for
-   Bel, but helps for debugging"
-  [x]
-  (println "[DEBUG] " (r/bel->pretty-clj x)))
+  [x] (println "[DEBUG] " (r/bel->pretty-clj x)))
+
+;; ----
+;; math
 
 (defn wrap-math-fn [f]
   (fn [& args]
@@ -138,22 +142,8 @@
        (number? v) (m/clj-num->bel-num v)
        (m/clj-bool->bel v)))))
 
-(def prim-name->fn
-  {"id" #'m/p-id
-   "car" #'m/p-car
-   "cdr" #'m/p-cdr
-   "join" #'m/p-join
-   "type" #'m/p-type
-   "xar" #'m/p-xar
-   "xdr" #'m/p-xdr
-   "sym" #'m/p-sym
-   "nom" #'m/p-nom
-   "coin" #'m/p-coin
-   "p-debug" #'p-debug
-
-   ;; math
-
-   "+" (wrap-math-fn +)
+(def math-name->fn
+  {"+" (wrap-math-fn +)
    "-" (wrap-math-fn -)
    "*" (wrap-math-fn *)
    "/" (wrap-math-fn /)
@@ -162,11 +152,35 @@
    "abs" (wrap-math-fn #(Math/abs %))
    "hash" (wrap-math-fn #(.hashCode %))})
 
+;; ---
+;; Env
+
+(def prim-name->fn
+  (merge
+   {"id" #'m/p-id
+    "car" #'m/p-car
+    "cdr" #'m/p-cdr
+    "join" #'m/p-join
+    "type" #'m/p-type
+    "xar" #'m/p-xar
+    "xdr" #'m/p-xdr
+    "sym" #'m/p-sym
+    "nom" #'m/p-nom
+    "coin" #'m/p-coin
+    "p-debug" #'p-debug}
+   math-name->fn))
+
+;; -------------
+;; special-prims
+
 (def special-prim-name->fn
   {"dyn" #'p-dyn
    "ccc" #'p-ccc
    "where" #'p-where
    "err" #'p-err})
+
+;; ---
+;; Env
 
 (defn make-bel-globe []
   (->> (merge prim-name->fn special-prim-name->fn)
@@ -175,6 +189,14 @@
                [:symbol k]
                (m/<-pairs [m/bel-lit m/bel-prim [:symbol k]]))))
        m/<-pairs))
+
+(defn make-env
+  ([] (make-env (make-bel-globe)))
+  ([g]
+   {:globe g
+    :scope m/bel-nil
+    :dyn
+    (m/make-pair m/bel-nil m/bel-nil)}))
 
 ;; ------------
 ;; bel-eval-if
@@ -294,8 +316,8 @@
               (concat [es rs env]
                       (m/pair->clojure-seq args-head)))))))
 
-;; -------------
-;; bel-eval-clo
+;; -----------
+;; assign-vars
 
 (defn bel-assign-vars-typecheck-2 [es rs env [_ variable arg]]
   (let [check (last rs)
@@ -378,6 +400,9 @@
                  (m/p-car var-head) (m/p-car arg-head)]])
      rs]))
 
+;; -----
+;; bel-eval-clo
+
 (defn bel-eval-clo-2 [es rs env [_ body-head]]
   (let [scope (last rs)
         rest-rs (drop-lastv rs)]
@@ -430,7 +455,6 @@
 
 ;; --------------
 ;; bel-eval-many
-
 
 (defn bel-eval-many-2 [es rs _env [_ rs-cnt]]
   (let [rest-rs (vec (take rs-cnt rs))
@@ -507,8 +531,8 @@
     (= m/bel-apply l) (bel-eval-apply-1 es rs env r)
     :else (bel-eval-application-1 es rs env form)))
 
+;; ------------------
 ;; bel-eval-backquote
-;; -------------
 
 (defn bel-eval-bq-comma-1 [es rs _env _form]
   (let [[r-evaled h-evaled] (take-last 2 rs)
@@ -583,9 +607,8 @@
            [env [:backquote r]])
      rs]))
 
+;; --------
 ;; bel-eval
-;; -------------
-
 
 (defn bel-eval-step [es rs]
   (let [top (last es)
@@ -688,9 +711,6 @@
       (= t :eval-apply-2)
       (bel-eval-apply-2 rest-es rs env form))))
 
-;; bel-eval
-;; --------
-
 (defn debug-loop [es rs]
   (println "in:")
   (mapv (comp println r/bel->pretty-clj second) es)
@@ -710,17 +730,8 @@
 (defn bel-eval-single [env form]
   (bel-eval [[env form]] []))
 
-(defn make-env
-  ([] (make-env (make-bel-globe)))
-  ([g]
-   {:globe g
-    :scope m/bel-nil
-    :dyn
-    (m/make-pair m/bel-nil m/bel-nil)}))
-
 (defn eval-all
   [env strs]
   (mapv (fn [s]
           (println "> " s)
           (bel-eval-single env (r/bel-parse s))) strs))
-
