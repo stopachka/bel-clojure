@@ -3572,6 +3572,8 @@ bar used in type specs. There is nothing specific to parameter lists
 about this bar, incidentally; it's just something the reader expands
 into a list beginning with t.
 
+===BREAK===
+
 > 'for|2
 (t for 2)
 

@@ -78,6 +78,16 @@
                   (fn [[_ v]]
                     [:number (edn/read-string v)])))
 
+(def pair-shorthand->pair
+  (form-transform :pair_shorthand
+                  (fn [[_ a b]]
+                    (m/make-pair a (m/make-pair b m/bel-nil)))))
+
+(def pair-quote-shorthand->pair
+  (form-transform :pair_quote_shorthand
+                  (fn [[_ a b]]
+                    (m/make-pair a (m/make-pair (m/make-pair m/bel-quote b)
+                                                m/bel-nil)))))
 ;; TODO: Right now, I only handle "sp"
 ;; We also want to handle tab, lf, cr, sp
 ;; I don't know lf cr sp. Will look deeper on that
@@ -98,7 +108,9 @@
    abbrev-fn->pair
    comp->pair
    type-comp->pair
-   transform-number))
+   transform-number
+   pair-shorthand->pair
+   pair-quote-shorthand->pair))
 
 (def bel-parse
   (comp (partial walk/postwalk parse-postwalk) parse-string cstring/trim))
@@ -132,5 +144,3 @@
 
     :else
     form))
-
-(bel-parse "(a b c)")
