@@ -11,36 +11,20 @@
 ;; --------
 ;; variable
 
-(defn remove-variable! [var-pair-head sym-to-remove]
-  (cond
-    (= m/bel-nil var-pair-head)
-    m/bel-nil
+(defn remove-variable! [variable t]
+  (m/map-remove variable t))
 
-    (= (m/p-car (m/p-car var-pair-head)) sym-to-remove)
-    (do
-      (m/p-xar var-pair-head
-               (m/p-car (m/p-cdr var-pair-head)))
-      (m/p-xdr var-pair-head
-               (m/p-cdr (m/p-cdr var-pair-head))))
-    :else
-    (remove-variable! (m/p-cdr var-pair-head) sym-to-remove)))
-
-(defn make-env-pair [sym v]
-  (assert (m/bel-variable? sym)
-          (format "expected left-side to be a variable= %s" sym))
-  (m/make-pair sym v))
-
-(defn find-env-pair [to-find pairs]
-  (let [v (some->> pairs
-                   (m/pair-find
-                    (fn [p] (= m/bel-t (m/p-id to-find (m/p-car p))))))]
-    (when (not= v m/bel-nil) v)))
+(defn find-env-pair [to-find t]
+  (m/map-get to-find t))
 
 (defn get-variable [{:keys [dyn scope globe]} form]
   (let [v (->> [dyn scope globe]
                (some (partial find-env-pair form)))]
     (assert v (format "expected value for variable = %s" form))
     v))
+
+(defn set-variable! [variable value t]
+  (m/map-set variable value t))
 
 (declare in-where?)
 
@@ -67,16 +51,13 @@
 ;; dyn
 
 (defn bel-eval-dyn-remove [es rs {:keys [dyn]} [_ variable]]
-  (remove-variable! dyn variable)
+  (remove-variable! variable dyn)
   [es rs])
 
-(defn bel-eval-dyn-2 [es rs env [_ variable after]]
+(defn bel-eval-dyn-2 [es rs {:keys [dyn] :as env} [_ variable after]]
   (let [ev (last rs)
-        rest-rs (drop-lastv rs)
-        {:keys [dyn]} env
-        [_ head tail] dyn]
-    (m/p-xar dyn (make-env-pair variable ev))
-    (m/p-xdr dyn (m/make-pair head tail))
+        rest-rs (drop-lastv rs)]
+    (set-variable! variable ev dyn)
     [(conj es
            [env [:dyn-remove variable]]
            [env after])
@@ -193,23 +174,23 @@
 ;; Env
 
 (defn make-bel-globe []
-  (->> (merge prim-name->fn special-prim-name->fn)
-       (map (fn [[k]]
-              (m/make-pair
-               [:symbol k]
-               (m/<-pairs [m/bel-lit m/bel-prim [:symbol k]]))))
-       m/<-pairs))
+  (let [t (m/make-map)]
+    (doseq [[k] (merge prim-name->fn special-prim-name->fn)]
+      (m/map-set [:symbol k]
+                 (m/<-pairs [m/bel-lit m/bel-prim [:symbol k]])
+                 t))
+    t))
 
 (defn make-env
   ([] (make-env (make-bel-globe)))
   ([g]
    {:globe g
-    :scope m/bel-nil
-    :dyn
-    (m/make-pair m/bel-nil m/bel-nil)}))
+    :scope (m/make-map)
+    :dyn (m/make-map)}))
 
 ;; ------------
 ;; bel-eval-if
+
 
 (defn bel-eval-if-2 [es rs env [_ [_ consequent-form r]]]
   (let [evaled-test-form (last rs)
@@ -241,10 +222,8 @@
 (defn bel-eval-set-2 [es rs {:keys [globe] :as _env} form]
   (let [[_ sym] form
         evaled-v (last rs)
-        rest-rs (drop-lastv rs)
-        [_ head tail] globe]
-    (m/p-xar globe (make-env-pair sym evaled-v))
-    (m/p-xdr globe (m/make-pair head tail))
+        rest-rs (drop-lastv rs)]
+    (set-variable! sym evaled-v globe)
     [es rest-rs]))
 
 (defn bel-eval-set-1 [es rs env form]
@@ -380,10 +359,7 @@
 
     (m/bel-variable? var-head)
     [es (conj rs
-              (m/make-pair (make-env-pair
-                            var-head
-                            arg-head)
-                           scope))]
+              (set-variable! var-head arg-head scope))]
 
     (m/bel-optional? var-head)
     (if (= m/bel-nil arg-head)

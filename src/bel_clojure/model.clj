@@ -2,7 +2,7 @@
   (:require
    [clojure.string :as cstring])
   (:import
-   (java.util ArrayList)))
+   (java.util ArrayList HashMap)))
 
 ;; ----
 ;; Misc
@@ -189,7 +189,7 @@
 (defn bel-typecheck-f [[_ _h [_ _variable r]]] (p-car r))
 
 ;; -------
-;; Interop 
+;; Interop
 
 (def bel-unwrap second)
 
@@ -201,3 +201,32 @@
   (condp = v
     "sp" " "
     v))
+
+
+;; ---------
+;; Map
+
+
+(defn make-map []
+  [:map (HashMap.)])
+
+(defn map-set [k v x]
+  (let [[_ m :as x'] (if (= bel-nil x)
+                       (make-map)
+                       x)]
+    (.put m k (make-pair k v))
+    x'))
+
+(defn map-remove [k x]
+  (let [[_ m :as x'] (if (= bel-nil x)
+                       (make-map)
+                       x)]
+    (.remove m k)
+    x'))
+
+(defn map-get [k x]
+  (let [[_ m :as] (if (= bel-nil x)
+                    (make-map)
+                    x)]
+    (or (.get m k) bel-nil)))
+
