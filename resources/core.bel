@@ -387,20 +387,6 @@
                  (and (= (car x) (car y))
                       (< (cdr x) (cdr y))))))
 
-; stopa-edit
-
-(def bin< args
-  (if (all no args) nil
-      (let x (car args)
-           (let f (if (number x) num<
-                      (char x) (of < charn)
-                      (string x) list<
-                      (symbol x) (of list< nom))
-                (apply f args)))))
-
-
-; /stopa-edit
-
 (def pint (n)
   (and (int? n) (> n 0)))
 

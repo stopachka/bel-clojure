@@ -130,6 +130,35 @@
 (def p-uvar gensym)
 
 ;; ----
+;; bin<
+
+
+(declare bel-compare)
+
+(defn base-compare
+  [a b] (compare a b))
+
+(defn list-compare
+  [a b]
+  (let [c1 (m/p-car a)
+        c2 (m/p-car b)
+        v (bel-compare c1 c2)]
+    (cond
+      (not= 0 v) v
+      (not= m/bel-nil (m/p-cdr a)) (bel-compare (m/p-cdr a) (m/p-cdr b))
+      :else v)))
+
+(defn bel-compare [a b]
+  (let [f (condp = (m/p-type a)
+            'string list-compare
+            'pair list-compare
+            base-compare)]
+    (f a b)))
+
+(defn p-bin< [& xs]
+  (m/clj-bool->bel (neg? (apply bel-compare xs))))
+
+;; ----
 ;; math
 
 (defn wrap-math-fn [f]
@@ -165,7 +194,8 @@
     "nom" #'m/p-nom
     "coin" #'m/p-coin
     "p-debug" #'p-debug
-    "uvar" #'p-uvar}
+    "uvar" #'p-uvar
+    "bin<" #'p-bin<}
    math-name->fn))
 
 ;; -------------
@@ -500,8 +530,8 @@
 (defn apply-head->args-head [x]
   (let [xs (m/pair->clojure-seq x)
         but-last (drop-last xs)
-        [last-t :as l] (last xs)
-        ls (if (= :pair last-t)
+        l (last xs)
+        ls (if (m/bel-pair? l)
              (m/pair->clojure-seq l)
              [l])]
     (->> (concat but-last ls)
