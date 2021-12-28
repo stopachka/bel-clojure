@@ -151,9 +151,8 @@
 ;; math
 
 (defn wrap-math-fn [f]
-  (fn [& args]
-    (let [xs (map m/bel-unwrap args)
-          v (apply f xs)]
+  (fn [& xs]
+    (let [v (apply f xs)]
       (if
        (number? v) (m/clj-num->bel-num v)
        (m/clj-bool->bel v)))))

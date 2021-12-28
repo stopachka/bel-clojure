@@ -1,6 +1,6 @@
 (ns bel-clojure.model
   (:require
-   [clojure.string :aj cstring]
+   [clojure.string :as cstring]
    [bel-clojure.model :as m])
   (:import
    (java.util ArrayList)))
@@ -102,13 +102,17 @@
     (last form)))
 
 (defn p-type [x]
-  (condp = (type x)
-    clojure.lang.Symbol 'symbol
-    (symbol (first x))))
+  (cond
+    (symbol? x) 'symbol
+    (string? x) 'char
+    (number? x) 'number
+    :else (symbol (first x))))
 
 (defn bel-pair? [a] (and (seqable? a) (= (first a) :pair)))
-(defn bel-char? [a] (and (seqable? a) (= (first a) :char)))
-(defn bel-symbol? [a] (= (type a) clojure.lang.Symbol))
+
+(def bel-char? string?)
+(def bel-symbol? symbol?)
+(def bel-number? number?)
 
 (defn p-xar [form y]
   (.set form 1 y)
@@ -118,15 +122,16 @@
   (.set form 2 y)
   form)
 
+(declare bel-char->clj)
 (defn p-sym [char-pairs]
   (let [cs (pair->clojure-seq char-pairs)
-        _  (assert (every? (comp (partial = :char) first) cs)
+        _  (assert (every? bel-char? cs)
                    "Expected a string")]
-    (symbol (->> cs (map second) cstring/join))))
+    (symbol (->> cs bel-char->clj cstring/join))))
 
 (defn p-nom [x]
   (->> (name x)
-       (map (fn [c] [:char (str c)]))
+       (map str)
        <-pairs))
 
 (defn p-coin [] (rand-nth [bel-t bel-nil]))
@@ -205,11 +210,11 @@
 
 (def bel-unwrap second)
 
-(defn clj-num->bel-num  [x] [:number x])
+(def clj-num->bel-num identity)
 
 (defn clj-bool->bel [x] (if x bel-t bel-nil))
 
-(defn bel-char->clj [[_ v]]
+(defn bel-char->clj [v]
   (condp = v
     "sp" " "
     v))
