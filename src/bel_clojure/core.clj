@@ -8,20 +8,16 @@
 ;; ---------
 ;; Bootstrap
 
-(defn readable-source []
-  (->> (-> (io/resource "core.bel")
-           slurp
-           (cstring/split #"\n"))
+(defn source-str->parts [source-str]
+  (->> (cstring/split source-str #"\n")
        (partition-by cstring/blank?)
        (map (fn [xs] (cstring/join "\n" xs)))
        (remove (fn [s] (cstring/starts-with? s ";")))
-       (remove cstring/blank?)
-       (take-while
-        (fn [s] (not= s "===BREAK===")))))
+       (remove cstring/blank?)))
 
 (defn bootstrap-env []
   (let [env (e/make-env)]
-    (e/eval-all env (readable-source))
+    (e/eval-all env (source-str->parts (slurp (io/resource "core.bel"))))
     env))
 
 ;; ----
