@@ -28,3 +28,11 @@ There are three big pieces left, to make this usable:
 3. Performance tuning. I made some tweaks, but there's a lot of low-hanging fruit still.
 
 This has been a lot of fun to write. I hope it’s as fun for you to play with it.
+
+## Tests
+
+To run all tests, 
+
+```
+clj -X:test
+```
