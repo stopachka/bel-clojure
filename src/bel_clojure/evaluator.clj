@@ -47,8 +47,6 @@
     (= m/bel-scope form)
     [es (conj rs (:scope env))]
 
-    (= m/bel-vmark-sym form)
-    [es (conj rs m/bel-vmark)]
     :else
     (let [v-pair (get-variable env form)]
       (if (in-where? es)

@@ -56,9 +56,6 @@
 (def bel-scope 'scope)
 (def bel-if 'if)
 (def bel-cont 'cont)
-(def bel-vmark-sym 'vmark)
-
-(defonce bel-vmark (p bel-nil bel-nil))
 
 ;; -------------
 ;; Pair Helpers

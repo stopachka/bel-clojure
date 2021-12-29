@@ -81,7 +81,7 @@
   (is (= (ev "(num< 2 3)") 't))
   (is (= (ev "(abs -4)") 4))
   (is (= (ev "(+ 0.05 (/ 19 20))") 1.0))
-  (is (= (ev "(int? 1)") 't))
+  (is (= (ev "(int 1)") 't))
   (is (number? (ev "(hash \\b)")))
   (is (= (ev "(set x 'a)" "(where x)")
          '((x . a) d)))
