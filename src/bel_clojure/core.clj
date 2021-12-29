@@ -14,9 +14,7 @@
            (cstring/split #"\n"))
        (partition-by cstring/blank?)
        (map (fn [xs] (cstring/join "\n" xs)))
-       (remove (fn [s]
-                 (cstring/starts-with? s ";")))
-
+       (remove (fn [s] (cstring/starts-with? s ";")))
        (remove cstring/blank?)
        (take-while
         (fn [s] (not= s "===BREAK===")))))
