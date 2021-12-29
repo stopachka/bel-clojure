@@ -1,23 +1,28 @@
-# bel-clojure
+Bel-Clojure, Alpha
+This is an attempt to run PG’s Bel in Clojure. It’s still early and incomplete, but good enough now to play with a REPL.
 
-Get ready for a mind-meld. This is an attempt to make PG's self-evaluating Bel Interpreter run on Clojure.
 
-Here's how it works:
+![](https://paper-attachments.dropbox.com/s_15C89CEDCE707B6F8971B64BFFE97004DB63ADF6E54143F4805460DC78B1DF41_1640807407334_bel-demo.gif)
 
-First, there's an Interpreter written in Clojure. This interpreter is a subset of Bel. It's juust intelligent enough, to read PG's own implementation of an intepreter `source.bel`. Once the source code is read, then PG's code can take over and handle user code.
 
-```
-User Code -> PG's Source Code -> Clojure Instance Interpreter
-```
+Try it out. Make sure you have Clojure installed. After that: 
 
-Warning: I won't be making optimizations, and since this is an interpreter on an interpreter, it will be slow. However, it can start as a REPL for the language. And who knows, one day we could optimize it and make it work for real-world programs.
 
-## Current Status
+    clj -X:repl
 
-You can check the `===BREAK===` breakpoint in `source.bel`. Right now we're about halfway through. I stopped here, as I did not implement proper tail call recursion, which is causing stack overflows. Hopefully will open this up and patch forward.
 
-# Dev
+Notable Differences, and Todos
 
-```
-clj -R:nREPL -m nrepl.cmdline -p 3434 -i
-```
+To make the interpreter tolerably fast, I departed from the source in 2 ways:
+
+
+1. I represent the environment as a map, rather than a list
+2. I leaked java’s numbers, strings, and characters into Bel
+3. I moved some logic out of the source and into the interpreter
+
+There are three big pieces left, to make this usable: 
+
+1. Streams. I didn’t implement streams yet. I think the best plan would be to leak Java streams, and I wanted to think about it.  
+2. Multi-threading. It should be simple (famous last words), but I haven’t gotten to it yet,.
+
+This has been a lot of fun to write. I hope it’s as fun for you to play with it. I hope to write something deeper about my impression of Bel as I built it down.
