@@ -1,16 +1,16 @@
 # Bel-Clojure, Alpha
 
-This is an attempt to run PG’s Bel in Clojure. It’s still early and incomplete, but good enough now to play with a REPL.
+<p align="center">
+<img src="https://paper-attachments.dropbox.com/s_15C89CEDCE707B6F8971B64BFFE97004DB63ADF6E54143F4805460DC78B1DF41_1640807407334_bel-demo.gif" width="450" />
+</p>
 
+This is an attempt to run PG’s Bel in Clojure. Want to try it out?
 
-![](https://paper-attachments.dropbox.com/s_15C89CEDCE707B6F8971B64BFFE97004DB63ADF6E54143F4805460DC78B1DF41_1640807407334_bel-demo.gif)
+First, Make sure you have [Clojure](https://clojure.org/guides/getting_started#_clojure_installer_and_cli_tools) installed. After that: 
 
-
-**Try it out.** Make sure you have [Clojure](https://clojure.org/guides/getting_started#_clojure_installer_and_cli_tools) installed. After that: 
-
-
-    clj -X:repl
-
+```bash
+clj -X:repl
+```
 
 ## Notable Differences, and Todos
 
@@ -25,5 +25,6 @@ There are three big pieces left, to make this usable:
 
 1. Streams. I didn’t implement streams yet. I think the best plan would be to leak Java streams, and I wanted to think about it.  
 2. Multi-threading. It should be simple (famous last words), but I haven’t gotten to it yet,.
+3. Performance tuning. I made some tweaks, but there's a lot of low-hanging fruit still.
 
-This has been a lot of fun to write. I hope it’s as fun for you to play with it. I hope to write something deeper about my impression of Bel as I built it down.
+This has been a lot of fun to write. I hope it’s as fun for you to play with it.
