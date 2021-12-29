@@ -12,7 +12,7 @@
 
 (deftest test-evaluator
   (is (= (ev "nil") nil))
-  (is (= (ev "\\bel") 'c-bel))
+  (is (= (ev "\\b") \b))
   (is (= (ev "\"foo\"") "foo"))
   (is (= (ev "'foo") 'foo))
   (is (= (ev "(type globe)") 'mut-map))
@@ -82,7 +82,7 @@
   (is (= (ev "(abs -4)") 4))
   (is (= (ev "(+ 0.05 (/ 19 20))") 1.0))
   (is (= (ev "(int? 1)") 't))
-  (is (number? (ev "(hash \\bel)")))
+  (is (number? (ev "(hash \\b)")))
   (is (= (ev "(set x 'a)" "(where x)")
          '((x . a) d)))
   (is (= (ev "(where (car '(a b)))")

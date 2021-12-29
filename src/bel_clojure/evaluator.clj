@@ -173,6 +173,7 @@
    "-" (wrap-math-fn -)
    "*" (wrap-math-fn *)
    "/" (wrap-math-fn /)
+   "int" (wrap-math-fn int)
    "int?" (wrap-math-fn int?)
    "num<" (wrap-math-fn <)
    "abs" (wrap-math-fn #(Math/abs %))
@@ -195,7 +196,8 @@
     "coin" #'m/p-coin
     "p-debug" #'p-debug
     "uvar" #'p-uvar
-    "bin<" #'p-bin<}
+    "bin<" #'p-bin<
+    "map-assoc" #'m/map-assoc }
    math-name->fn))
 
 ;; -------------
@@ -719,5 +721,5 @@
 (defn eval-all
   [env strs]
   (mapv (fn [s]
-          (println "> " s)
+          (println s)
           (bel-eval-single env (r/bel-parse s))) strs))

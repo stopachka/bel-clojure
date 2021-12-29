@@ -3640,7 +3640,7 @@ expressions directly.
 
 The bquote macro is the biggest in the Bel source, and gives a taste
 of how macros, as they become more powerful, can become like
-compilers.
+compilers.k
 
 The general goal of backquote is to turn an expression containing
 backquotes, commas, and comma-ats into calls to the familiar
@@ -4051,18 +4051,14 @@ Then come a group of macros for iteration. The first, whilet,
 evaluates its body while a test expression returns true, with a
 variable bound to its value.
 
-> (let x '(a b c)
-    (whilet y (pop x)
-      (pr y))
-    x)
+> (let x '(a b c) (whilet y (pop x) (pr y)) x)
 abcnil
 
 Then comes the general loop macro, which sets a variable to an
 initial value, then updates the value on successive iterations, so
 long as some test expression is true.
 
-> (loop x 1 (+ x 1) (< x 5)
-    (pr x))
+> (loop x 1 (+ x 1) (< x 5) (pr x))
 1234nil
 
 Several other iteration macros can then be defined in terms of loop,
@@ -4093,9 +4089,7 @@ The for macro starts a variable at some initial value and then
 increments it by 1 on each succeeding pass through the loop, till it
 exceeds some threshold.
 
-> (for x 1 10
-    (pr x))
-12345678910nil
+> (for x 1 10 (pr x)) 12345678910nil
 
 The repeat macro simply evaluates its body a certain number of
 times.
@@ -4107,17 +4101,14 @@ bangbangbangnil
 And the poll macro evaluates an expression till a function is true of
 the result, at which point it's returned.
 
-> (let x '(a b c d e)
-    (poll (pop x) is!c)
-    x)
+> (let x '(a b c d e) (poll (pop x) is!c) x)
 (d e)
 
 The accum macro takes a variable and a body of code and evaluates the
 body with the variable lexically bound to a function that accumulates
 all the values it's called on. It returns the list of values.
 
-> (accum a
-    (map (cand odd a) '(1 2 3 4 5)))
+> (accum a (map (cand odd a) '(1 2 3 4 5)))
 (1 3 5)
 
 It's used in nof, which takes a number and an expression and returns
@@ -4133,8 +4124,7 @@ some expression till it returns nil, or a value passing some other
 optional test, and returns a list of all the values the expression
 returned.
 
-> (let x '(a b c d e)
-    (drain (pop x)))
+> (let x '(a b c d e) (drain (pop x)))
 (a b c d e)
 > (let x '(a b c d e)
     (drain (pop x) is!d))
@@ -4174,9 +4164,7 @@ a list and returns it.
 Like any macro that uses where for assignment, pop can operate on any
 pair that you can find a way to refer to.
 
-> (let x '(a b c)
-    (pop (cdr x))
-    x)
+> (let x '(a b c) (pop (cdr x)) x)
 (a c)
 
 The clean macro removes everything from a list for which its first
@@ -4189,9 +4177,7 @@ argument returns true:
 
 And swap rotates the values of its arguments
 
-> (let (x y z) '(a b c)
-    (swap x y z)
-    (list x y z))
+> (let (x y z) '(a b c) (swap x y z) (list x y z))
 (b c a)
 
 as a degenerate case of which, if there are two arguments, it swaps

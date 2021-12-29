@@ -24,7 +24,8 @@
   (id x nil))
 
 (def atom (x)
-  (no (id (type x) 'pair)))
+  (if (no (id (type x) 'pair))
+      (if (no (id (type x) 'string)) t)))
 
 (def all (f xs)
   (if (no xs)      t
@@ -131,27 +132,23 @@
                        (and (apply = (map car args))
                             (apply = (map cdr args)))))
 
+; stopa-edit
+
 (def symbol (x) (= (type x) 'symbol))
 
 (def pair   (x) (= (type x) 'pair))
 
-
 (def char   (x) (= (type x) 'char))
 
-; stopa-edit
+(def number (x) (= (type x) 'number))
 
-(def number  (x) (= (type x) 'number))
+(def string (x) (= (type x) 'string))
 
 ; /stopa-edit
-
-(def stream (x) (= (type x) 'stream))
 
 (def proper (x)
   (or (no x)
       (and (pair x) (proper (cdr x)))))
-
-(def string (x)
-  (and (proper x) (all char x)))
 
 (def mem (x ys (o f =))
   (some [f _ x] ys))
@@ -410,7 +407,7 @@
         (cons as (runs f bs (no fon))))))
 
 (def whitec (c)
-  (in c \sp \lf \tab \cr))
+  (in c \space \n \tab \r))
 
 (def tokens (xs (o break whitec))
   (let f (if (function break) break (is break))
@@ -504,485 +501,7 @@
     `(let ,v ,x
        (zap [rem ,v _ ,@rest] ,place))))
 
-===BREAK===
-
-; - just start deleting the bits on streams. see if I can avoid em for now!
-; - create a special “smark”
-; - use maps for env scope dye
-; - make sure we have a way for things to be able to “be invokable” i.e numbers (vir)
-; - make sure that numbers work with compose: 2:nil
-; - handle different namecs
-
-(set cbuf '((nil)))
-
-(def open args
-  (let s (apply ops args)
-    (push (list s) cbuf)
-    s))
-
-(def close (s)
-  (pull s cbuf caris)
-  (cls s))
-
-(def peek ((o s ins))
-  (if ((cor no stream) s)
-      (let c (wait (fn ()
-                     (atomic (let p (get s cbuf)
-                               (or (cdr p)
-                                   (aif (bitc s) (xdr p it) nil))))))
-        (if (= c 'eof) nil c))
-      (car (car s))))
-
-(def rdc ((o s ins))
-  (if ((cor no stream) s)
-      (let c (wait (fn ()
-                     (atomic (let p (get s cbuf)
-                               (aif (cdr p)
-                                    (do (xdr p nil) it)
-                                    (bitc s))))))
-        (if (= c 'eof) nil c))
-      (deq s)))
-
-(set bbuf nil)
-
-(def bitc ((o s ins))
-  (let bits (get s bbuf)
-    (aif (gets (rev (cdr bits)) chars)
-         (do (pull s bbuf caris)
-             (car it))
-         (let b (rdb s)
-           (if (in b nil 'eof)
-               b
-               (do (if bits
-                       (push b (cdr bits))
-                       (push (list s b) bbuf))
-                   (bitc s)))))))
-
-(def digit (c (o base i10))
-  (mem c (udrop (udrop base i16) "fedcba9876543210")))
-
-(set breakc (cor no whitec (is \;) [get _ syntax]))
-
-(def signc (c)
-  (in c \+ \-))
-
-(def intrac (c)
-  (in c \. \!))
-
-(set source (cor no stream (cand pair string:car)))
-
-(def read ((o s|source ins) (o (t base [<= 2 _ 16]) 10) (o eof))
-  (car (rdex s (srnum:numr base) eof)))
-
-(def saferead ((o s ins) (o alt) (o base 10))
-  (onerr alt (read s base alt)))
-
-(def rdex ((o s ins) (o base i10) (o eof) (o share))
-  (eatwhite s)
-  (let c (rdc s)
-    (aif (no c)         (list eof share)
-         (get c syntax) ((cdr it) s base share)
-                        (list (rdword s c base) share))))
-
-(def eatwhite (s)
-  (pcase (peek s)
-    whitec  (do (rdc s)
-                (eatwhite s))
-    (is \;) (do (charstil s (is \lf))
-                (eatwhite s))))
-
-(def charstil (s f)
-  (if ((cor no f) (peek s))
-      nil
-      (cons (rdc s) (charstil s f))))
-
-(set syntax nil)
-
-(mac syn (c . rest)
-  `(set syntax (put ,c (fn ,@rest) syntax)))
-
-(syn \( (s base share)
-  (rdlist s \) base share))
-
-(syn \) args
-  (err 'unexpected-terminator))
-
-(syn \[ (s base share)
-  (let (e newshare) (rdlist s \] base share)
-    (list (list 'fn '(_) e) newshare)))
-
-(syn \] args
-  (err 'unexpected-terminator))
-
-(def rdlist (s term base share (o acc))
-  (eatwhite s)
-  (pcase (peek s)
-    no        (err 'unterminated-list)
-    (is \.)   (do (rdc s) (rddot s term base share acc))
-    (is term) (do (rdc s) (list acc share))
-              (let (e newshare) (rdex s base nil share)
-                (rdlist s term base newshare (snoc acc e)))))
-
-(def rddot (s term base share acc)
-  (pcase (peek s)
-    no     (err 'unterminated-list)
-    breakc (if (no acc)
-               (err 'missing-car)
-               (let (e newshare) (hard-rdex s base share 'missing-cdr)
-                 (if (car (rdlist s term base share))
-                     (err 'duplicate-cdr)
-                     (list (apply cons (snoc acc e))
-                           newshare))))
-           (rdlist s term base share (snoc acc (rdword s \. base)))))
-
-(def hard-rdex (s base share msg)
-  (let eof (join)
-    (let v (rdex s base eof share)
-      (if (id (car v) eof) (err msg) v))))
-
-(set namecs '((bel . \bel) (tab . \tab) (lf . \lf) (cr . \cr) (sp . \sp)))
-
-(syn \\ (s base share)
-  (list (pcase (peek s)
-          no     (err 'escape-without-char)
-          breakc (rdc s)
-                 (let cs (charstil s breakc)
-                   (if (cdr cs)
-                       (aif (get (sym cs) namecs)
-                            (cdr it)
-                            (err 'unknown-named-char))
-                       (car cs))))
-        share))
-
-(syn \' (s base share)
-  (rdwrap s 'quote base share))
-
-(syn \` (s base share)
-  (rdwrap s 'bquote base share))
-
-(syn \, (s base share)
-  (case (peek s)
-    \@ (do (rdc s)
-           (rdwrap s 'comma-at base share))
-       (rdwrap s 'comma base share)))
-
-(def rdwrap (s token base share)
-  (let (e newshare) (hard-rdex s base share 'missing-expression)
-    (list (list token e) newshare)))
-
-(syn \" (s base share)
-  (list (rddelim s \") share))
-
-(syn \¦ (s base share)
-  (list (sym (rddelim s \¦)) share))
-
-(def rddelim (s d (o esc))
-  (let c (rdc s)
-    (if (no c)   (err 'missing-delimiter)
-        esc      (cons c (rddelim s d))
-        (= c \\) (rddelim s d t)
-        (= c d)  nil
-                 (cons c (rddelim s d)))))
-
-(syn \# (s base share)
-  (let name (charstil s ~digit)
-    (if (= (peek s) \=)
-        (do (rdc s)
-            (rdtarget s base name (join) share))
-        (aif (get name share)
-             (list (cdr it) share)
-             (err 'unknown-label)))))
-
-(def rdtarget (s base name cell oldshare)
-  (withs (share        (cons (cons name cell) oldshare)
-          (e newshare) (hard-rdex s base share 'missing-target))
-    (if (simple e)
-        (err 'bad-target)
-        (do (xar cell (car e))
-            (xdr cell (cdr e))
-            (list cell newshare)))))
-
-(def rdword (s c base)
-  (parseword (cons c (charstil s breakc)) base))
-
-(def parseword (cs base)
-  (or (parsenum cs base)
-      (if (= cs ".")       (err 'unexpected-dot)
-          (mem \| cs)      (parset cs base)
-          (some intrac cs) (parseslist (runs intrac cs) base)
-                           (parsecom cs base))))
-
-(def parsenum (cs base)
-  (if (validi cs base)
-      (buildnum srzero (parsei cs base))
-      (let sign (check (car cs) signc)
-        (let (ds es) (split signc (if sign (cdr cs) cs))
-          (and (validr ds base)
-               (or (no es) (validi es base))
-               (buildnum (parsesr (consif sign ds) base)
-                         (if (no es) srzero (parsei es base))))))))
-
-(def validi (cs base)
-  (and (signc (car cs))
-       (= (last cs) \i)
-       (let digs (cdr (dock cs))
-         (or (no digs) (validr digs base)))))
-
-(def validr (cs base)
-  (or (validd cs base)
-      (let (n d) (split (is \/) cs)
-        (and (validd n base)
-             (validd (cdr d) base)))))
-
-(def validd (cs base)
-  (and (all (cor [digit _ base] (is \.)) cs)
-       (some [digit _ base] cs)
-       (~cdr (keep (is \.) cs))))
-
-(def parsei (cs base)
-  (if (cddr cs)
-      (parsesr (dock cs) base)
-      (if (caris cs \+)
-          srone
-          (srinv srone))))
-
-(def parsesr (cs base)
-  (withs (sign  (if (signc (car cs)) (sym (list (car cs))))
-          (n d) (split (is \/) (if sign (cdr cs) cs)))
-    (simplify (cons (or sign '+)
-                    (r/ (parsed n base)
-                        (if d
-                            (let rd (parsed (cdr d) base)
-                              (if (caris rd i0)
-                                  (err 'zero-denominator)
-                                  rd))
-                            (list i1 i1)))))))
-
-(def parsed (cs base)
-  (let (i f) (split (is \.) cs)
-    (if (cdr f)
-        (list (parseint (rev (append i (cdr f))) base)
-              (i^ base
-                  (apply i+ (map (con i1) (cdr f)))))
-        (list (parseint (rev i) base) i1))))
-
-(def parseint (ds base)
-  (if ds
-      (i+ (charint (car ds))
-          (i* base (parseint (cdr ds) base)))
-      i0))
-
-(def charint (c)
-  (map (con t) (mem c "fedcba987654321")))
-
-(def parset (cs base)
-  (if (cdr (keep (is \|) cs))
-      (err 'multiple-bars)
-      (let vt (tokens cs \|)
-        (if (= (len vt) 2)
-            (cons t (map [parseword _ base] vt))
-            (err 'bad-tspec)))))
-
-(def parseslist (rs base)
-  (if (intrac (car (last rs)))
-      (err 'final-intrasymbol)
-      (map (fn ((cs ds))
-             (if (cdr cs)      (err 'double-intrasymbol)
-                 (caris cs \!) (list 'quote (parsecom ds base))
-                               (parsecom ds base)))
-           (hug (if (intrac (car (car rs)))
-                    (cons "." "upon" rs)
-                    (cons "." rs))))))
-
-(def parsecom (cs base)
-  (if (mem \: cs)
-      (cons 'compose (map [parseno _ base] (tokens cs \:)))
-      (parseno cs base)))
-
-(def parseno (cs base)
-  (if (caris cs \~)
-      (if (cdr cs)
-          (list 'compose 'no (parseno (cdr cs) base))
-          'no)
-      (or (parsenum cs base) (sym cs))))
-
-(mac bquote (e)
-  (let (sub change) (bqex e nil)
-    (if change sub (list 'quote e))))
-
-(def bqex (e n)
-  (if (no e)   (list nil nil)
-      (atom e) (list (list 'quote e) nil)
-               (case (car e)
-                 bquote   (bqthru e (list n) 'bquote)
-                 comma    (if (no n)
-                              (list (cadr e) t)
-                              (bqthru e (car n) 'comma))
-                 comma-at (if (no n)
-                              (list (list 'splice (cadr e)) t)
-                              (bqthru e (car n) 'comma-at))
-                          (bqexpair e n))))
-
-(def bqthru (e n op)
-  (let (sub change) (bqex (cadr e) n)
-    (if change
-        (list (if (caris sub 'splice)
-                  `(cons ',op ,(cadr sub))
-                  `(list ',op ,sub))
-              t)
-        (list (list 'quote e) nil))))
-
-(def bqexpair (e n)
-  (with ((a achange) (bqex (car e) n)
-         (d dchange) (bqex (cdr e) n))
-    (if (or achange dchange)
-        (list (if (caris d 'splice)
-                  (if (caris a 'splice)
-                      `(apply append (spa ,(cadr a)) (spd ,(cadr d)))
-                      `(apply cons ,a (spd ,(cadr d))))
-                  (caris a 'splice)
-                  `(append (spa ,(cadr a)) ,d)
-                  `(cons ,a ,d))
-              t)
-        (list (list 'quote e) nil))))
-
-(def spa (x)
-  (if (and x (atom x))
-      (err 'splice-atom)
-      x))
-
-(def spd (x)
-  (pcase x
-    no   (err 'splice-empty-cdr)
-    atom (err 'splice-atom)
-    cdr  (err 'splice-multiple-cdrs)
-         x))
-
-(mac comma args
-  '(err 'comma-outside-backquote))
-
-(mac comma-at args
-  '(err 'comma-at-outside-backquote))
-
-(mac splice args
-  '(err 'comma-at-outside-list))
-
-(def print (x (o s outs) (o names (namedups x)) (o hist))
-  (aif (simple x)        (do (prsimple x s) hist)
-       (ustring x names) (prstring x s names hist)
-       (get x names id)  (do (prc \# s)
-                             (print (cdr it) s)
-                             (if (mem x hist id)
-                                 hist
-                                 (do (prc \= s)
-                                     (if (ustring (cdr x) names)
-                                         (prstring x s names (cons x hist))
-                                         (prpair x s names (cons x hist))))))
-                         (prpair x s names hist)))
-
-(def namedups (x (o n 0))
-  (map [cons _ (++ n)] (dups (cells x) id)))
-
-(def cells (x (o seen))
-  (if (simple x)      seen
-      (mem x seen id) (snoc seen x)
-                      (cells (cdr x)
-                             (cells (car x) (snoc seen x)))))
-
-(def prc (c (o s outs))
-  (if (atom s)
-      (aif (get c chars)
-           (map [wrb _ s] (cdr it))
-           (err 'unknown char))
-      (enq c s))
-  c)
-
-(def ustring (x names)
-  (and x (string x) (~tail [get _ names id] x)))
-
-(def prstring (x s names hist)
-  (prc \" s)
-  (presc x \" s)
-  (prc \" s)
-  hist)
-
-(def presc (cs esc s)
-  (map (fn (c)
-         (if (in c esc \\) (prc \\ s))
-         (prc c s))
-       cs))
-
-(def prsimple (x s)
-  (pcase x
-    symbol (prsymbol x s)
-    char   (do (prc \\ s) (prc x s))
-    stream (map [prc _ s] "<stream>")
-    number (prnum (numr x) (numi x) s)
-           (err 'cannot-print)))
-
-(def prsymbol (x s)
-  (let cs (nom x)
-    (let odd (~= (saferead (list cs)) x)
-      (if odd (prc \¦ s))
-      (presc cs \¦ s)
-      (if odd (prc \¦ s)))))
-
-(def prnum (r i s)
-  (unless (and (= r srzero) (~= i srzero))
-    (if (caris r '-) (prc \- s))
-    (map [prc _ s] (rrep (cdr r))))
-  (unless (= i srzero)
-    (print (car i) s)
-    (unless (apply = (cdr i))
-      (map [prc _ s] (rrep (cdr i))))
-    (prc \i s)))
-
-(def rrep ((n d) (o base i10))
-  (append (irep n base)
-          (if (= d i1) nil (cons \/ (irep d base)))))
-
-(def irep (x base)
-  (if (i< x base)
-      (list (intchar x))
-      (let (q r) (i/ x base)
-        (snoc (irep q base) (intchar r)))))
-
-(def intchar (x)
-  (car (udrop x "0123456789abcdef")))
-
-(def prpair (x s names hist)
-  (prc \( s)
-  (do1 (prelts x s names hist)
-       (prc \) s)))
-
-(def prelts ((x . rest) s names hist)
-  (let newhist (print x s names hist)
-    (if (or (and rest (simple rest))
-            (ustring rest names)
-            (get rest names id))
-        (do (map [prc _ s] " . ")
-            (print rest s names newhist))
-        (if rest
-            (do (prc \sp s)
-                (prelts rest s names newhist))
-            newhist))))
-
-(def prn args
-  (map [do (print _) (prc \sp)] args)
-  (prc \lf)
-  (last args))
-
-(def pr args
-  (map prnice args))
-
-(def prnice (x (o s outs))
-  (pcase x
-    char   (prc x s)
-    string (map [prc _ s] x)
-           (print x s nil))
-  x)
-
-(def drop (n|whole xs)
+(def drop (n xs)
   (if (= n 0)
       xs
       (drop (- n 1) (cdr xs))))
@@ -992,13 +511,8 @@
       (car xs)
       (nth (- n 1) (cdr xs))))
 
-(vir num (f args)
-  `(nth ,f ,@args))
 
-(def nchar (n)
-  (car ((+ n 1) chars)))
-
-(def first (n|whole xs)
+(def first (n xs)
   (if (or (= n 0) (no xs))
       nil
       (cons (car xs)
@@ -1042,27 +556,11 @@
 (def <= args
   (apply >= (rev args)))
 
-(def floor (x|real)
-  (let (s n d) (numr x)
-    (let (f m) (i/ n d)
-      (litnum (list s
-                    (i+ f (if (or (= s '+) (= m i0))
-                              i0
-                              i1))
-                    i1)))))
-
-(set ceil -:floor:-)
-
-(def mod (x y)
-  (* (- (/ x y) (floor (/ x y)))
-     y))
-
 (mac whilet (var expr . body)
   (letu (vf vp)
     `((rfn ,vf (,vp)
         (whenlet ,var ,vp ,@body (,vf ,expr)))
       ,expr)))
-
 
 (mac loop (var init update test . body)
   (letu v
@@ -1110,19 +608,6 @@
   (letu v
     `(accum ,v
        (poll ,expr (cor ,f (compose no ,v))))))
-
-(def ^w (x y|whole)
-  (apply * (nof y x)))
-
-(def clog2 (n)
-  (if (<= n 2) 1 (inc:clog2 (/ n 2))))
-
-(def randlen (n)
-  (read (list (nof n (if (coin) \0 \1)))
-        2))
-
-(def rand (n|pint)
-  (poll (randlen (clog2 n)) [< _ n]))
 
 (mac wipe args
   `(set ,@(fuse [list _ nil] args)))
@@ -1179,114 +664,3 @@
 (def min args
   (best < args))
 
-(def even (n)
-  (int (/ n 2)))
-
-(set odd (cand int ~even))
-
-(def round (n)
-  (let r (fn (n)
-           (withs (f (floor n)
-                   d (- n f))
-             (if (or (> d 1/2) (and (= d 1/2) (odd f)))
-                 (ceil n)
-                 f)))
-    (if (< n 0) (-:r:- n) (r n))))
-
-(mac withfile (var name dir . body)
-  `(let ,var (open ,name ,dir)
-     (after (do ,@body) (close ,var))))
-
-(mac from (name . body)
-  (letu v
-    `(withfile ,v ,name 'in
-       (bind ins ,v ,@body))))
-
-(mac to (name . body)
-  (letu v
-    `(withfile ,v ,name 'out
-       (bind outs ,v ,@body))))
-
-(def readall ((o s ins) (o base 10))
-  (let eof (join)
-    (drain (read s base eof) [id _ eof])))
-
-(def load (name)
-  (let eof (join)
-    (withfile s name 'in
-      (til e (read s 10 eof) (id e eof)
-        (bel e)))))
-
-(mac record body
-  (letu v
-    `(let ,v (newq)
-       (bind outs ,v ,@body)
-       (car ,v))))
-
-(def prs args
-  (record (apply pr args)))
-
-(def array (dims (o default))
-  (if (no dims)
-      default
-      `(lit arr ,@(nof (car dims)
-                       (array (cdr dims) default)))))
-
-(vir arr (f args)
-  `(aref ,f ,@args))
-
-(def aref (a|isa!arr n . ns)
-  (if (no ns)
-      (n (cddr a))
-      (apply aref (n (cddr a)) ns)))
-
-(def table ((o kvs))
-  `(lit tab ,@kvs))
-
-(vir tab (f args)
-  `(tabref ,f ,@args))
-
-(def tabref (tab key (o default))
-  (aif (get key (cddr tab))
-       (cdr it)
-       default))
-
-(loc isa!tab (f args a s r m)
-  (let e `(list (tabloc ,f ,@(map [list 'quote _] args)) 'd)
-    (mev (cons (list e a) (cdr s)) r m)))
-
-(def tabloc (tab key)
-  (or (get key (cddr tab))
-      (let kv (cons key nil)
-        (push kv (cddr tab))
-        kv)))
-
-(def tabrem (tab key (o f =))
-  (clean [caris _ key f] (cddr tab)))
-
-(set templates (table))
-
-(mac tem (name . fields)
-  `(set (templates ',name)
-        (list ,@(map (fn ((k v)) `(cons ',k (fn () ,v)))
-                     (hug fields)))))
-
-(mac make (name . args)
-  `(inst ',name
-         (list ,@(map (fn ((k v)) `(cons ',k ,v))
-                      (hug args)))))
-
-(def inst (name kvs)
-  (aif templates.name
-       (table (map (fn ((k . f))
-                     (cons k
-                           (aif (get k kvs) (cdr it) (f))))
-                   it))
-       (err 'no-template)))
-
-(def readas (name (o s ins))
-  (withs (eof (join)
-          v   (read s 10 eof))
-    (if (id v eof)  nil
-        (isa!tab v) (inst name (cddr v))
-                    (err 'inst-nontable))))
