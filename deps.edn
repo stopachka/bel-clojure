@@ -1,6 +1,14 @@
 {:paths ["src" "resources"]
  :deps {instaparse/instaparse {:mvn/version "1.4.10"}}
- :aliases  {:test {:extra-paths ["test"]}
+ :aliases  {:repl {:main-opts ["-m" "bel-clojure.core"]
+                   :exec-fn bel-clojure.core/-main}
+            :test {:extra-deps {io.github.cognitect-labs/test-runner
+                                {:git/url "https://github.com/cognitect-labs/test-runner.git"
+                                 :sha "9e35c979860c75555adaff7600070c60004a0f44"}}
+                   :main-opts ["-m" "cognitect.test-runner"]
+                   :exec-fn cognitect.test-runner.api/test
+                   :extra-paths ["test"]}
+
             :nREPL
             {:extra-paths ["test"]
              :extra-deps

@@ -1,4 +1,4 @@
-(ns bel-clojure.instance.reader-test
+(ns bel-clojure.reader-test
   (:require
    [bel-clojure.reader :refer :all]
    [clojure.test :refer :all]))

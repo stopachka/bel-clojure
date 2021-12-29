@@ -56,7 +56,7 @@
                  env form)))
       (recur))))
 
-(defn -main []
+(defn -main [& _args]
   (println "   Loading core.bel...")
   (repl (bootstrap-env)))
 
