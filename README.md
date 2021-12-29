@@ -1,7 +1,7 @@
-# Bel-Clojure, Alpha
+# bel-blojure: super-alpha
 
 <p align="center">
-<img src="https://paper-attachments.dropbox.com/s_15C89CEDCE707B6F8971B64BFFE97004DB63ADF6E54143F4805460DC78B1DF41_1640807407334_bel-demo.gif" width="450" />
+<img src="/reference/repl-demo.gif" width="450" />
 </p>
 
 This is a hack to run PG’s Bel in Clojure. Want to try it out?

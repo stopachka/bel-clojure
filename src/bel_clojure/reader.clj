@@ -16,9 +16,17 @@
       (f x)
       x)))
 
+;; -------
+;; unwrap 
+
 (def unwrap-sexp (form-transform :sexp second))
 
 (def unwrap-space (form-transform :space second))
+
+(def unwrap-name (form-transform :name second))
+
+;; ----
+;; list 
 
 (def list->pair
   (form-transform
@@ -26,64 +34,74 @@
    (fn [[_t & children]]
      (m/<-pairs children))))
 
-(def string->pair
+;; -------
+;; string 
+
+(def transform-string
   (form-transform
    :string
    (fn [[_t & children]]
-     (cstring/join (map second  children)))))
+     (cstring/join (map second children)))))
 
-(def unwrap-name (form-transform :name second))
+;; -----
+;; quote
 
 (def quote->pair
   (form-transform :quote
                   (fn [[_ exp]]
                     (m/make-quoted-pair exp))))
 
+;; ----------
+;; abbrev-fn
+
 (def abbrev-fn->pair
   (form-transform :abbrev_fn
                   (fn [[_ & xs]]
-                    (m/make-pair
+                    (m/p
                      'fn
-                     (m/make-pair
-                      (m/make-pair '_ m/bel-nil)
-                      (m/make-pair
+                     (m/p
+                      (m/p '_ m/bel-nil)
+                      (m/p
                        (m/<-pairs xs)
                        m/bel-nil))))))
+
+;; ----------
+;; abbrev-sym 
 
 (declare handle-abbrev-sym)
 
 (defn handle-bar [left-xs right-xs]
-  (m/make-pair 't (m/make-pair
-                   (handle-abbrev-sym left-xs)
-                   (m/make-pair
-                    (handle-abbrev-sym right-xs)
-                    m/bel-nil))))
+  (m/p 't (m/p
+           (handle-abbrev-sym left-xs)
+           (m/p
+            (handle-abbrev-sym right-xs)
+            m/bel-nil))))
 
 (defn handle-dot [left-xs right-xs]
-  (m/make-pair (if (seq left-xs)
-                 (handle-abbrev-sym left-xs)
-                 'upon)
-               (m/make-pair (handle-abbrev-sym right-xs) m/bel-nil)))
+  (m/p (if (seq left-xs)
+         (handle-abbrev-sym left-xs)
+         'upon)
+       (m/p (handle-abbrev-sym right-xs) m/bel-nil)))
 
 (defn handle-excl [left-xs right-xs]
-  (m/make-pair (if (seq left-xs)
-                 (handle-abbrev-sym left-xs)
-                 'upon)
-               (m/make-pair (m/make-pair m/bel-quote
-                                         (handle-abbrev-sym right-xs)) m/bel-nil)))
+  (m/p (if (seq left-xs)
+         (handle-abbrev-sym left-xs)
+         'upon)
+       (m/p (m/p m/bel-quote
+                 (handle-abbrev-sym right-xs)) m/bel-nil)))
 
 (defn handle-no [left-xs [r & right-xs]]
   (handle-abbrev-sym
    (concat left-xs
-           [(m/make-pair
+           [(m/p
              'compose
-             (m/make-pair
+             (m/p
               'no
-              (m/make-pair r m/bel-nil)))]
+              (m/p r m/bel-nil)))]
            right-xs)))
 
 (defn handle-col [left-xs right-xs]
-  (m/make-pair
+  (m/p
    'compose
    (->> (concat left-xs right-xs)
         (remove (fn [x] (and (seqable? x) (= (first x) :comp_id))))
@@ -109,20 +127,31 @@
 
 (def abbrev-sym->pair
   (form-transform :comp_sym
-                  (fn [[_ & xs :as form]]
+                  (fn [[_ & xs]]
                     (handle-abbrev-sym xs))))
+
+;; ------
+;; number
 
 (def transform-number
   (form-transform :number
                   (fn [[_ v]] (edn/read-string v))))
 
+;; ------
+;; symbol
+
 (def transform-symbol
-  (form-transform :symbol (fn [[_ v]]
-                            (symbol v))))
+  (form-transform :symbol (fn [[_ v]] (symbol v))))
+
+;; ------
+;; char
 
 (def transform-char
   (form-transform :char (fn [[_ x]]
                           (edn/read-string (str "\\" x)))))
+
+;; -----
+;; bel-parse 
 
 (def parse-string (-> "bel.ebnf" io/resource insta/parser))
 
@@ -131,7 +160,7 @@
 (def parse-postwalk
   (comp
    list->pair
-   string->pair
+   transform-string
    quote->pair
    transform-symbol
    unwrap-name
@@ -162,9 +191,8 @@
     'pair
     (let [[_ a b] form]
       (concat [(bel->pretty-clj a)]
-                (cond
-                  (= m/bel-nil b) nil
-                  (m/bel-pair? b) (bel->pretty-clj b)
-                  :else ['. (bel->pretty-clj b)])))
+              (cond
+                (= m/bel-nil b) nil
+                (m/bel-pair? b) (bel->pretty-clj b)
+                :else ['. (bel->pretty-clj b)])))
     form))
-

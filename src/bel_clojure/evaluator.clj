@@ -8,15 +8,25 @@
 
 (def drop-lastv (comp vec drop-last))
 
+;; ------
+;; where
+
+(defn in-where? [es]
+  (= (second (last es)) [:where]))
+
+(defn p-where [es rs env x]
+  [(conj es
+         [env [:where]]
+         [env x])
+   rs])
+
 ;; --------
 ;; variable
 
 (defn make-env-pair [sym v]
   (assert (m/bel-variable? sym)
           (format "expected left-side to be a variable= %s" sym))
-  (m/make-pair sym v))
-
-(declare in-where?)
+  (m/p sym v))
 
 (defn not-bel-nil [x]
   (when-not (= x m/bel-nil) x))
@@ -44,7 +54,7 @@
       (if (in-where? es)
         [(drop-lastv es)
          (conj rs
-               (m/make-pair v-pair (m/make-pair m/bel-d m/bel-nil)))]
+               (m/p v-pair (m/p m/bel-d m/bel-nil)))]
         [es
          (conj rs (m/p-cdr v-pair))]))))
 
@@ -86,9 +96,9 @@
     [(conj
       es
       [env
-       (m/make-pair
+       (m/p
         f-evaled
-        (m/make-pair
+        (m/p
          (m/<-pairs [m/bel-lit m/bel-cont (fn [] [es rest-rs])])
          m/bel-nil))])
      rest-rs]))
@@ -100,25 +110,13 @@
     [env f])
    rs])
 
-;; ------
-;; where
-
-(defn in-where? [es]
-  (= (second (last es)) [:where]))
-
-(defn p-where [es rs env x]
-  [(conj es
-         [env [:where]]
-         [env x])
-   rs])
-
 ;; ---
 ;; err
 
-(defn p-err [es rs env e]
+(defn p-err [_es _rs _env e]
   [[] [[:err e]]])
 
-;; -------
+;; -----
 ;; debug
 
 (defn p-debug
@@ -131,7 +129,6 @@
 
 ;; ----
 ;; bin<
-
 
 (declare bel-compare)
 
@@ -179,8 +176,8 @@
    "abs" (wrap-math-fn #(Math/abs %))
    "hash" (wrap-math-fn #(.hashCode %))})
 
-;; ---
-;; Env
+;; ------------
+;; simple-prims
 
 (def prim-name->fn
   (merge
@@ -220,7 +217,7 @@
                   (m/map-put
                    m
                    sym-k
-                   (m/make-pair
+                   (m/p
                     sym-k
                     (m/<-pairs [m/bel-lit m/bel-prim sym-k]))))))
          doall)
@@ -251,7 +248,7 @@
              [env (m/p-car r)]
              :else
              [env
-              (m/make-pair m/bel-if r)]))
+              (m/p m/bel-if r)]))
      rest-rs]))
 
 (defn bel-eval-if-1 [es rs env [_ test-form r]]
@@ -279,7 +276,7 @@
                   "Set sym needs a value")
         [_ v after-v] after-sym
         es' (if (not= after-v m/bel-nil)
-              (conj es [env (m/make-pair m/bel-set after-v)])
+              (conj es [env (m/p m/bel-set after-v)])
               es)]
     [(conj es'
            [env [:set-2 sym]]
@@ -317,9 +314,9 @@
       (if (in-where? es)
         [(drop-lastv es)
          (conj rs
-               (m/make-pair
+               (m/p
                 (m/p-car evaled-args)
-                (m/make-pair
+                (m/p
                  (condp = n
                    "car" m/bel-a
                    "cdr" m/bel-d
@@ -331,9 +328,9 @@
                (apply simple-f
                       (bel-nil-args simple-f args)))])
       (catch Throwable e
-        [(conj es [env (m/make-pair
+        [(conj es [env (m/p
                         m/bel-err-sym
-                        (m/make-pair [:clj-err e]
+                        (m/p [:clj-err e]
                                      m/bel-nil))])
          rest-rs]))))
 
@@ -360,9 +357,9 @@
         rest-rs (drop-lastv rs)]
     (if (= m/bel-nil check)
       [(conj es
-             [env (m/make-pair
+             [env (m/p
                    m/bel-err-sym
-                   (m/make-pair (m/make-pair m/bel-quote 'mistype)
+                   (m/p (m/p m/bel-quote 'mistype)
                                 m/bel-nil))])
        rs]
       [(conj es
@@ -377,9 +374,9 @@
         rest-rs (drop-lastv rs)]
     [(conj es
            [env [:assign-vars-typecheck-2 variable arg]]
-           [env (m/make-pair
+           [env (m/p
                  evaled-f
-                 (m/make-pair (m/make-pair m/bel-quote arg)
+                 (m/p (m/p m/bel-quote arg)
                               m/bel-nil))])
      rest-rs]))
 
@@ -437,7 +434,7 @@
                  (m/p-car var-head) (m/p-car arg-head)]])
      rs]))
 
-;; -----
+;; ------------
 ;; bel-eval-clo
 
 (defn bel-eval-clo-2 [es rs env [_ body-head]]
@@ -545,7 +542,7 @@
         rest-rs (drop-lastv rs)]
     [(conj
       es
-      [env (m/make-pair
+      [env (m/p
             f (apply-head->args-head evaled-apply-head))])
      rest-rs]))
 
@@ -576,7 +573,7 @@
     [es
      (conj
       rest-rs
-      (m/make-pair
+      (m/p
        h-evaled
        r-evaled))]))
 
@@ -596,7 +593,7 @@
     [es
      (conj
       rest-rs
-      (m/make-pair
+      (m/p
        h-evaled
        r-evaled))]))
 
@@ -606,7 +603,7 @@
     [es
      (conj
       rest-rs
-      (m/make-pair
+      (m/p
        h
        r-evaled))]))
 

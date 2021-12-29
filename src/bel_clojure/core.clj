@@ -59,4 +59,3 @@
 (defn -main [& _args]
   (println "   Loading core.bel...")
   (repl (bootstrap-env)))
-
