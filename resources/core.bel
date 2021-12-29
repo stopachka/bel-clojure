@@ -24,7 +24,8 @@
   (id x nil))
 
 (def atom (x)
-  (no (id (type x) 'pair)))
+  (if (no (id (type x) 'pair))
+      (if (no (id (type x) 'string)) t)))
 
 (def all (f xs)
   (if (no xs)      t
@@ -131,27 +132,23 @@
                        (and (apply = (map car args))
                             (apply = (map cdr args)))))
 
+; stopa-edit
+
 (def symbol (x) (= (type x) 'symbol))
 
 (def pair   (x) (= (type x) 'pair))
 
-
 (def char   (x) (= (type x) 'char))
 
-; stopa-edit
+(def number (x) (= (type x) 'number))
 
-(def number  (x) (= (type x) 'number))
+(def string (x) (= (type x) 'string))
 
 ; /stopa-edit
-
-(def stream (x) (= (type x) 'stream))
 
 (def proper (x)
   (or (no x)
       (and (pair x) (proper (cdr x)))))
-
-(def string (x)
-  (and (proper x) (all char x)))
 
 (def mem (x ys (o f =))
   (some [f _ x] ys))
@@ -410,7 +407,7 @@
         (cons as (runs f bs (no fon))))))
 
 (def whitec (c)
-  (in c \sp \lf \tab \cr))
+  (in c \space \n \tab \r))
 
 (def tokens (xs (o break whitec))
   (let f (if (function break) break (is break))

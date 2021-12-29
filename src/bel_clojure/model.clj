@@ -16,7 +16,7 @@
 
 (defn make-pair
   ([a b]
-   ([:pair a b] ArrayList.)))
+   (ArrayList. [:pair a b] )))
 
 ;; ---------
 ;; Constants
@@ -84,9 +84,16 @@
 
 (defn p-join [a b] (make-pair a b))
 
+(def bel-string? string?)
+(def bel-char? char?)
+(def bel-symbol? symbol?)
+(def bel-number? number?)
+
 (defn p-car [form]
   (cond
     (= bel-nil form) form
+
+    (bel-string? form) (first form)
 
     (not (bel-pair? form))
     (throw (Exception. (format "expected pair, got = %s" form)))
@@ -98,16 +105,13 @@
   (cond
     (= bel-nil form) form
 
+    (bel-string? form) (<-pairs (rest form))
+
     (not (bel-pair? form))
     (throw (Exception. (format "expected pair, got = %s" form)))
 
     :else
     (last form)))
-
-(def bel-string? string?)
-(def bel-char? char?)
-(def bel-symbol? symbol?)
-(def bel-number? number?)
 
 (defn p-type [x]
   (cond
@@ -129,17 +133,9 @@
   (.set form 2 y)
   form)
 
-(declare bel-char->clj)
-(defn p-sym [char-pairs]
-  (let [cs (pair->clojure-seq char-pairs)
-        _  (assert (every? bel-char? cs)
-                   "Expected a string")]
-    (symbol (->> cs bel-char->clj cstring/join))))
+(def p-sym symbol)
 
-(defn p-nom [x]
-  (->> (name x)
-       (map str)
-       <-pairs))
+(def p-nom name)
 
 (defn p-coin [] (rand-nth [bel-t bel-nil]))
 
@@ -147,13 +143,6 @@
   (or (= bel-nil p)
       (and (bel-pair? p)
            (pair-proper? (p-cdr p)))))
-
-(defn pair-find [f p]
-  (loop [p p]
-    (cond
-      (= bel-nil p) p
-      (f (p-car p)) (p-car p)
-      :else (recur (p-cdr p)))))
 
 (defn pair-map [f p]
   (if (= bel-nil p) bel-nil
@@ -206,11 +195,6 @@
 ;; Interop
 
 (defn clj-bool->bel [x] (if x bel-t bel-nil))
-
-(defn bel-char->clj [v]
-  (condp = v
-    "sp" " "
-    v))
 
 ;; ----
 ;; Maps
