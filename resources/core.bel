@@ -512,7 +512,7 @@
       (nth (- n 1) (cdr xs))))
 
 
-(def first (n|whole xs)
+(def first (n xs)
   (if (or (= n 0) (no xs))
       nil
       (cons (car xs)
@@ -556,27 +556,11 @@
 (def <= args
   (apply >= (rev args)))
 
-(def floor (x|real)
-  (let (s n d) (numr x)
-    (let (f m) (i/ n d)
-      (litnum (list s
-                    (i+ f (if (or (= s '+) (= m i0))
-                              i0
-                              i1))
-                    i1)))))
-
-(set ceil -:floor:-)
-
-(def mod (x y)
-  (* (- (/ x y) (floor (/ x y)))
-     y))
-
 (mac whilet (var expr . body)
   (letu (vf vp)
     `((rfn ,vf (,vp)
         (whenlet ,var ,vp ,@body (,vf ,expr)))
       ,expr)))
-
 
 (mac loop (var init update test . body)
   (letu v
@@ -624,12 +608,6 @@
   (letu v
     `(accum ,v
        (poll ,expr (cor ,f (compose no ,v))))))
-
-(def ^w (x y|whole)
-  (apply * (nof y x)))
-
-(def clog2 (n)
-  (if (<= n 2) 1 (inc:clog2 (/ n 2))))
 
 (mac wipe args
   `(set ,@(fuse [list _ nil] args)))
@@ -685,38 +663,4 @@
 
 (def min args
   (best < args))
-
-(mac record body
-  (letu v
-    `(let ,v (newq)
-       (bind outs ,v ,@body)
-       (car ,v))))
-
-(def prs args
-  (record (apply pr args)))
-
-(def array (dims (o default))
-  (if (no dims)
-      default
-      `(lit arr ,@(nof (car dims)
-                       (array (cdr dims) default)))))
-
-(def aref (a n . ns)
-  (if (no ns)
-      (n (cddr a))
-      (apply aref (n (cddr a)) ns)))
-
-(def tabref (tab key (o default))
-  (aif (get key (cddr tab))
-       (cdr it)
-       default))
-
-(def tabloc (tab key)
-  (or (get key (cddr tab))
-      (let kv (cons key nil)
-        (push kv (cddr tab))
-        kv)))
-
-(def tabrem (tab key (o f =))
-  (clean [caris _ key f] (cddr tab)))
 
