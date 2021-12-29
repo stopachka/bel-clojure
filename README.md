@@ -1,17 +1,18 @@
-Bel-Clojure, Alpha
+# Bel-Clojure, Alpha
+
 This is an attempt to run PG’s Bel in Clojure. It’s still early and incomplete, but good enough now to play with a REPL.
 
 
 ![](https://paper-attachments.dropbox.com/s_15C89CEDCE707B6F8971B64BFFE97004DB63ADF6E54143F4805460DC78B1DF41_1640807407334_bel-demo.gif)
 
 
-Try it out. Make sure you have Clojure installed. After that: 
+**Try it out.** Make sure you have [Clojure](https://clojure.org/guides/getting_started#_clojure_installer_and_cli_tools) installed. After that: 
 
 
     clj -X:repl
 
 
-Notable Differences, and Todos
+## Notable Differences, and Todos
 
 To make the interpreter tolerably fast, I departed from the source in 2 ways:
 
