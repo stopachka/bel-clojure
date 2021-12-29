@@ -721,5 +721,4 @@
 (defn eval-all
   [env strs]
   (mapv (fn [s]
-          (println s)
           (bel-eval-single env (r/bel-parse s))) strs))
