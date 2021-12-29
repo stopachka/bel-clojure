@@ -18,6 +18,53 @@ clj -X:repl
 clj -X:test
 ```
 
+## Some Examples
+
+This is PG's `examples`, recreated on this interpreter. You can note what's implemented, and the slight differences.
+
+```clojure
+>
+(cons 'a 'b '(c d e))
+>  (a b c d e)
+(cons \h (map idfn "ello"))
+>  (h e l l o)
+(set w '(a (b c) d (e f)))
+>  nil
+(find pair w)
+>  (b c)
+(pop (find pair w))
+>  b
+w
+>  (a (c) d (e f))
+(dedup:sort < "abracadabra")
+>  (a b c d r)
+(map (upon 2 3) (list + - * /))
+>  (5 -1 6 2/3)
+(let x 'a
+    (cons x 'b))
+>  (a . b)
+(with (x 1 y 2) 
+    (+ x y))
+>  3
+(let ((x y) . z) '((a b) c)
+    (list x y z))
+>  (a b (c))
+((fn (x) (cons x 'b)) 'a)
+>  (a . b)
+((fn (x|symbol) (cons x 'b)) 'a)
+>  (a . b)
+((fn (f x|f) (cons x 'b)) sym 'a)
+>  (a . b)
+((macro (v) `(set ,v 7)) x)
+>  nil
+x
+>  7
+(apply or '(t nil))
+>  t
+(best (of > len) '((a b) (a b c d) (a) (a b c)))
+>  (a b c d)
+```
+
 ## Notes
 
 To make the interpreter tolerably fast, **I tweaked the source in three ways**
@@ -34,3 +81,4 @@ This isn't done yet. **There's 4 todos remaining**
 3. Performance tuning. I made some tweaks, but there's a lot of low-hanging fruit still.
 
 This has been a lot of fun to write. I hope it’s as fun for you to play with it.
+
