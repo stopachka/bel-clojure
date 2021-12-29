@@ -23,9 +23,14 @@
 (def no (x)
   (id x nil))
 
+; stopa-edit
+; string is a separate type in this implementation
+
 (def atom (x)
   (if (no (id (type x) 'pair))
       (if (no (id (type x) 'string)) t)))
+
+; /stopa-edit
 
 (def all (f xs)
   (if (no xs)      t
@@ -133,6 +138,8 @@
                             (apply = (map cdr args)))))
 
 ; stopa-edit
+; Added number + string as primitive types. Letting
+; these seep in from Clojure
 
 (def symbol (x) (= (type x) 'symbol))
 
