@@ -53,6 +53,8 @@ w
 >  (a . b)
 ((fn (x|symbol) (cons x 'b)) 'a)
 >  (a . b)
+((fn (x|int) (cons x 'b)) 'a)
+>  (err (qt . mistype))
 ((fn (f x|f) (cons x 'b)) sym 'a)
 >  (a . b)
 ((macro (v) `(set ,v 7)) x)
