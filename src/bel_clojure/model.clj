@@ -15,10 +15,8 @@
 ;; Pair Cons
 
 (defn make-pair
-  ([a b] (make-pair a b nil))
-  ([a b extra-t]
-   (ArrayList. [(with-meta 'pair
-                           {:extra-t extra-t}) a b])))
+  ([a b]
+   ([:pair a b] ArrayList.)))
 
 ;; ---------
 ;; Constants
@@ -52,18 +50,16 @@
   (make-pair bel-quote a))
 
 (defn <-pairs
-  ([xs] (<-pairs xs nil))
-  ([xs extra-t]
-   (let [[x n & after-n] xs
-         after-x (rest xs)]
-     (if (empty? xs)
-       bel-nil
-       (make-pair
-        x
-        (if (= bel-dot n)
-          (first-and-only after-n "dotted list _must_ have 1 exp after the dot")
-          (<-pairs after-x extra-t))
-        extra-t)))))
+  [xs]
+  (let [[x n & after-n] xs
+        after-x (rest xs)]
+    (if (empty? xs)
+      bel-nil
+      (make-pair
+       x
+       (if (= bel-dot n)
+         (first-and-only after-n "dotted list _must_ have 1 exp after the dot")
+         (<-pairs after-x))))))
 
 (declare p-car p-cdr)
 
@@ -108,20 +104,22 @@
     :else
     (last form)))
 
+(def bel-string? string?)
+(def bel-char? char?)
+(def bel-symbol? symbol?)
+(def bel-number? number?)
+
 (defn p-type [x]
   (cond
     (symbol? x) 'symbol
-    (string? x) 'char
+    (string? x) 'string
+    (char? x) 'char
     (number? x) 'number
     (= (type x) java.util.HashMap) 'mut-map
     (= (type x) clojure.lang.PersistentArrayMap) 'imm-map
     :else (symbol (first x))))
 
-(defn bel-pair? [a] (and (seqable? a) (#{'pair} (first a))))
-
-(def bel-char? string?)
-(def bel-symbol? symbol?)
-(def bel-number? number?)
+(defn bel-pair? [a] (and (seqable? a) (= :pair (first a))))
 
 (defn p-xar [form y]
   (.set form 1 y)
@@ -176,13 +174,6 @@
   (if (= bel-nil p) true
       (and (f (p-car p))
            (pair-every? f (p-cdr p)))))
-
-;; -------
-;; String
-
-(defn bel-string? [a]
-  (and (bel-pair? a)
-     (= (:extra-t (meta (first a))) :string)))
 
 ;; ---------
 ;; Variable

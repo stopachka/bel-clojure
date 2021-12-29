@@ -697,7 +697,7 @@
       (bel-eval-variable rest-es rs env form)
 
       :else
-      (let [f (step->fn (keyword (name (first form))))]
+      (let [f (step->fn (first form))]
         (f rest-es rs env form)))))
 
 (defn debug-loop [es rs]

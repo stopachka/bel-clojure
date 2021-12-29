@@ -11,7 +11,7 @@
   (is (= (pretty-parse "(a b c)") '(a b c)))
   (is (= (pretty-parse "_") '_))
   (is (= (pretty-parse "'+") '(qt . +)))
-  (is (= (pretty-parse "\\bel") 'c-bel))
+  (is (= (pretty-parse "\\b") \b))
   (is (= (pretty-parse "(a . b)")
          '(a . b)))
   (is (= (pretty-parse "(a b . c)")
@@ -34,12 +34,9 @@
   (is (= (pretty-parse "car:cdr:cdr")
          '(compose  car cdr cdr)))
   (is (= (pretty-parse "c|isa!cont")
-         '(t c (isa (qt . cont)))
-         ))
-
+         '(t c (isa (qt . cont)))))
   (is (= (pretty-parse "!a")
-        '(upon (qt . a))))
-
+         '(upon (qt . a))))
   (is (= '(compose no f)
          (pretty-parse "~f")))
   (is (= (pretty-parse "x|~f:g!a")

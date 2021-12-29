@@ -5,8 +5,7 @@
    [clojure.walk :as walk]
    [clojure.string :as cstring]
    [clojure.edn :as edn]
-   [bel-clojure.model :as m]
-   [bel-clojure.reader :as r]))
+   [bel-clojure.model :as m]))
 
 (defn form-transform
   [k f]
@@ -19,6 +18,8 @@
 
 (def unwrap-sexp (form-transform :sexp second))
 
+(def unwrap-space (form-transform :space second))
+
 (def list->pair
   (form-transform
    :list
@@ -29,7 +30,7 @@
   (form-transform
    :string
    (fn [[_t & children]]
-     (m/<-pairs (map (fn [[_ v]] (str v)) children) :string))))
+     (cstring/join (map second  children)))))
 
 (def unwrap-name (form-transform :name second))
 
@@ -115,18 +116,13 @@
   (form-transform :number
                   (fn [[_ v]] (edn/read-string v))))
 
-;; TODO: Right now, I only handle "sp"
-;; We also want to handle tab, lf, cr, sp
-;; I don't know lf cr sp. Will look deeper on that
-
 (def transform-symbol
   (form-transform :symbol (fn [[_ v]]
                             (symbol v))))
 
-(def transform-space
-  (form-transform :space (fn [_] "sp")))
-
-(def unwrap-char (form-transform :char second))
+(def transform-char
+  (form-transform :char (fn [[_ x]]
+                          (edn/read-string (str "\\" x)))))
 
 (def parse-string (-> "bel.ebnf" io/resource insta/parser))
 
@@ -141,39 +137,34 @@
    unwrap-name
    unwrap-sexp
    unwrap-abbrev-sym-pt
-   transform-space
+   unwrap-space
    abbrev-fn->pair
    abbrev-sym->pair
    transform-number
-   unwrap-char))
+   transform-char))
 
 (def bel-parse
   (comp (partial walk/postwalk parse-postwalk) parse-string cstring/trim))
 
-;; ------
+;; ----------------
 ;; bel->pretty-clj
 
 (defn bel->pretty-clj [form]
   (condp = (m/p-type form)
     'symbol (if (= m/bel-nil form) nil form)
-    'char (symbol (str "c-" form))
     'backquote (list 'bq (bel->pretty-clj (second form)))
     'comma (list 'cm (bel->pretty-clj (second form)))
     'splice (list 'spl (bel->pretty-clj (second form)))
     'err (list 'err (bel->pretty-clj (second form)))
+    'char form
     'number form
+    'string form
     'pair
     (let [[_ a b] form]
-      (if
-       (m/bel-string? form)
-        (->> form
-             m/pair->clojure-seq
-             (map m/bel-char->clj)
-             cstring/join)
-        (concat [(bel->pretty-clj a)]
+      (concat [(bel->pretty-clj a)]
                 (cond
                   (= m/bel-nil b) nil
                   (m/bel-pair? b) (bel->pretty-clj b)
-                  :else ['. (bel->pretty-clj b)]))))
+                  :else ['. (bel->pretty-clj b)])))
     form))
 
