@@ -49,7 +49,7 @@
         "   (cons 'a 'b '(c d e))\n"
         ">"))
   (loop []
-    (let [form (read-form [])]
+    (let [form (read-form)]
       (println "> "
                (r/bel->pretty-clj
                 (e/bel-eval-single
