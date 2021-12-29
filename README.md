@@ -1,4 +1,4 @@
-# bel-blojure: super-alpha
+# bel-clojure: super-alpha
 
 <p align="center">
 <img src="/reference/repl-demo.gif" width="450" />
