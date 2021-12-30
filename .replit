@@ -1,2 +1,2 @@
 language = "bash"
-run = "clj -M -m bel-clojure.core"
+run = "clj -m bel-clojure.core"
