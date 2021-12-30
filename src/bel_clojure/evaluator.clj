@@ -717,36 +717,38 @@
       (let [f (step->fn (first form))]
         (f rest-es rs env form)))))
 
-(defn run-thread [orchestration
+(defn run-thread [todo-orchestration
                   [expression-stack return-stack]]
   (future
     (loop [es rs]
-      (when (locked? orchestration)
-        (wait! orchestration))
+      (when (todo-locked? todo-orchestration)
+        (todo-wait! todo-orchestration))
       (let [top (last es)
+            rest-es (drop-lastv es)
             maybe-orch-message (and (seqable? top) (first top))
             orch-signal
-            (condp = orch-message
+            (condp = maybe-orch-message
               :start-thread
               (run-thread
-               orchestration
+               todo-orchestration
                [(second top) []])
               :lock-start
-              (lock! orchestration)
+              (todo-lock! todo-orchestration)
               :lock-stop
-              (unlock! orchestration)
+              (todo-unlock! todo-orchestration)
               :orch-signal)
-            [es rs top] (if (= orch-signal :orch-signal)
-                          [(drop-lastv (drop-lastv es)) rs (last (drop-lastv es))]
-                          [(drop-lastv es) rs top])
-
-            [es' rs'] (bel-eval-step es rs top)]
-        (recur es' rs')))))
+            [es rs] (if (= orch-signal :orch-signal)
+                      [rest-es rs]
+                      [es rs])
+            [es' rs'] (bel-eval-step es rs)]
+        (if (empty? es')
+          (todo-done todo-orchestration (last rs'))
+          (recur es' rs'))))))
 
 (defn bel-eval
   ([eval-stack return-stack]
    (run-thread
-    orchestration
+    todo-orchestration
     [eval-stack return-stack])))
 
 (defn bel-eval-single [env form]
