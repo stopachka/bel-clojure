@@ -726,23 +726,23 @@
       (let [top (last es)
             rest-es (drop-lastv es)
             maybe-orch-message (and (seqable? top) (first top))
-            orch-signal
+            [es rs]
             (condp = maybe-orch-message
               :start-thread
-              (run-thread
-               todo-orchestration
-               [(second top) []])
+              (do (run-thread
+                   todo-orchestration
+                   [(second top) []])
+                  [rest-es rs])
               :lock-start
-              (todo-lock! todo-orchestration)
+              (do (todo-lock! todo-orchestration)
+                  [rest-es rs])
               :lock-stop
-              (todo-unlock! todo-orchestration)
-              :orch-signal)
-            [es rs] (if (= orch-signal :orch-signal)
-                      [rest-es rs]
-                      [es rs])
+              (do  (todo-unlock! todo-orchestration)
+                   [rest-es rs])
+              [es rs])
             [es' rs'] (bel-eval-step es rs)]
         (if (empty? es')
-          (todo-done todo-orchestration (last rs'))
+          (todo-done! todo-orchestration (last rs'))
           (recur es' rs'))))))
 
 (defn bel-eval
