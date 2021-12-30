@@ -56,6 +56,15 @@
         [es
          (conj rs (m/p-cdr v-pair))]))))
 
+;; ----------
+;; p-thread
+
+(defn p-thread [es rs env form]
+  [(conj
+    es
+    [env [:start-thread env form]])
+   rs])
+
 ;; ----
 ;; dyn
 
@@ -190,7 +199,7 @@
     "p-debug" #'p-debug
     "uvar" #'p-uvar
     "bin<" #'p-bin<
-    "map-assoc" #'m/map-assoc }
+    "map-assoc" #'m/map-assoc}
    math-name->fn))
 
 ;; -------------
@@ -200,7 +209,8 @@
   {"dyn" #'p-dyn
    "ccc" #'p-ccc
    "where" #'p-where
-   "err" #'p-err})
+   "err" #'p-err
+   "thread" #'p-thread})
 
 ;; ---
 ;; Env
@@ -327,7 +337,7 @@
         [(conj es [env (m/p
                         m/bel-err-sym
                         (m/p [:clj-err e]
-                                     m/bel-nil))])
+                             m/bel-nil))])
          rest-rs]))))
 
 (defn bel-eval-prim [es rs env litv args-head]
@@ -356,7 +366,7 @@
              [env (m/p
                    m/bel-err-sym
                    (m/p (m/p m/bel-quote 'mistype)
-                                m/bel-nil))])
+                        m/bel-nil))])
        rs]
       [(conj es
              [env
@@ -373,7 +383,7 @@
            [env (m/p
                  evaled-f
                  (m/p (m/p m/bel-quote arg)
-                              m/bel-nil))])
+                      m/bel-nil))])
      rest-rs]))
 
 (defn bel-assign-vars-optional-arg [es rs env [_ variable]]
@@ -693,23 +703,50 @@
       (let [f (step->fn (first form))]
         (f rest-es rs env form)))))
 
-(defn debug-loop [es rs]
+(defn debug-loop [tid es rs]
+  (println "tid:" tid)
   (println "in:")
   (mapv (comp println r/bel->pretty-clj second) es)
   (println "out:")
   (mapv println rs)
   (println "---"))
 
-(defn bel-eval [eval-stack return-stack]
-  (loop [es eval-stack
-         rs return-stack]
-    (if (empty? es)
-      (or (last rs) m/bel-nil)
-      (let [[new-es new-rs] (bel-eval-step es rs)]
-        (recur new-es new-rs)))))
+(defn start-thread-command? [form]
+  (and (seqable? form) (= :start-thread (first form))))
+
+(defn start-thread-command->thread [[_ env form]]
+  [(gensym) [[env form]] []])
+
+(defn locking? [es]
+  (let [lock (some-> es last first :dyn (get 'lock))]
+    (and lock (not= lock m/bel-nil))))
+
+(defn bel-eval [threads]
+  (loop [threads threads]
+    (let [[top-thread & rest-threads] threads
+          [tid es rs] top-thread
+          [_ top-form] (last es)]
+      (cond
+        (empty? es)
+        (if (empty? rest-threads)
+          (or (last rs) m/bel-nil)
+          (recur rest-threads))
+
+        (start-thread-command? top-form)
+        (recur
+         (into [(start-thread-command->thread top-form)
+                [tid (drop-lastv es) rs]]
+               rest-threads))
+        :else
+        (let [[es' rs'] (bel-eval-step es rs)
+              thread' [tid es' rs']]
+          (recur
+           (if (locking? es')
+             (into [thread'] rest-threads)
+             (into (vec rest-threads) [thread']))))))))
 
 (defn bel-eval-single [env form]
-  (bel-eval [[env form]] []))
+  (bel-eval [[(gensym) [[env form]] []]]))
 
 (defn eval-all
   [env strs]
