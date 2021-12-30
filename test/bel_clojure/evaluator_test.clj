@@ -88,4 +88,8 @@
   (is (= (ev "(where (car '(a b)))")
          '((a b) a)))
   (is (= (ev "(where (cdr '(a b)))")
-         '((a b) d))))
+         '((a b) d))) 
+  
+  (ev "(locking (p-debug \"hi\"))")
+  (ev "(thread (p-debug \"hi\"))")
+  )

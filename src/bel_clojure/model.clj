@@ -141,11 +141,6 @@
      (p-car a)
      (pair-append (p-cdr a) b))))
 
-(defn pair-every? [f p]
-  (if (= bel-nil p) true
-      (and (f (p-car p))
-           (pair-every? f (p-cdr p)))))
-
 ;; ---------
 ;; Variable
 

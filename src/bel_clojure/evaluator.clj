@@ -80,6 +80,28 @@
     [env arg])
    rs])
 
+
+;; ----------
+;; p-thread
+
+
+(defn p-thread [es rs env form]
+  [(conj
+    es
+    [env [:start-thread env form]])
+   rs])
+
+;; ----------
+;; p-locking
+
+(defn p-locking [es rs env form]
+  [(conj
+    es
+    [env [:lock-stop]]
+    [env form]
+    [env [:lock-start]])
+   rs])
+
 ;; ----
 ;; ccc
 
@@ -190,7 +212,7 @@
     "p-debug" #'p-debug
     "uvar" #'p-uvar
     "bin<" #'p-bin<
-    "map-assoc" #'m/map-assoc }
+    "map-assoc" #'m/map-assoc}
    math-name->fn))
 
 ;; -------------
@@ -200,7 +222,9 @@
   {"dyn" #'p-dyn
    "ccc" #'p-ccc
    "where" #'p-where
-   "err" #'p-err})
+   "err" #'p-err
+   "thread" #'p-thread
+   "locking" #'p-locking})
 
 ;; ---
 ;; Env
@@ -327,7 +351,7 @@
         [(conj es [env (m/p
                         m/bel-err-sym
                         (m/p [:clj-err e]
-                                     m/bel-nil))])
+                             m/bel-nil))])
          rest-rs]))))
 
 (defn bel-eval-prim [es rs env litv args-head]
@@ -356,7 +380,7 @@
              [env (m/p
                    m/bel-err-sym
                    (m/p (m/p m/bel-quote 'mistype)
-                                m/bel-nil))])
+                        m/bel-nil))])
        rs]
       [(conj es
              [env
@@ -373,7 +397,7 @@
            [env (m/p
                  evaled-f
                  (m/p (m/p m/bel-quote arg)
-                              m/bel-nil))])
+                      m/bel-nil))])
      rest-rs]))
 
 (defn bel-assign-vars-optional-arg [es rs env [_ variable]]
@@ -693,20 +717,37 @@
       (let [f (step->fn (first form))]
         (f rest-es rs env form)))))
 
-(defn debug-loop [es rs]
-  (println "in:")
-  (mapv (comp println r/bel->pretty-clj second) es)
-  (println "out:")
-  (mapv println rs)
-  (println "---"))
+(defn run-thread [orchestration
+                  [expression-stack return-stack]]
+  (future
+    (loop [es rs]
+      (when (locked? orchestration)
+        (wait! orchestration))
+      (let [top (last es)
+            maybe-orch-message (and (seqable? top) (first top))
+            orch-signal
+            (condp = orch-message
+              :start-thread
+              (run-thread
+               orchestration
+               [(second top) []])
+              :lock-start
+              (lock! orchestration)
+              :lock-stop
+              (unlock! orchestration)
+              :orch-signal)
+            [es rs top] (if (= orch-signal :orch-signal)
+                          [(drop-lastv (drop-lastv es)) rs (last (drop-lastv es))]
+                          [(drop-lastv es) rs top])
 
-(defn bel-eval [eval-stack return-stack]
-  (loop [es eval-stack
-         rs return-stack]
-    (if (empty? es)
-      (or (last rs) m/bel-nil)
-      (let [[new-es new-rs] (bel-eval-step es rs)]
-        (recur new-es new-rs)))))
+            [es' rs'] (bel-eval-step es rs top)]
+        (recur es' rs')))))
+
+(defn bel-eval
+  ([eval-stack return-stack]
+   (run-thread
+    orchestration
+    [eval-stack return-stack])))
 
 (defn bel-eval-single [env form]
   (bel-eval [[env form]] []))
