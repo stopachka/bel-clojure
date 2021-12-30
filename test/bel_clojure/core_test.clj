@@ -183,5 +183,9 @@
   (is (= (ev "(best > '(1 2 4 5))") 5))
   (is (= (ev "(best (of > len) '((a) (b c) (d e) (f)))") '(b c)))
   (is (= (ev "(do (thread (do (join 'a 'b)))
-                (thread (do (join 'a 'b) (join 'b 'd))))")
-         '(b . d))))
+                  (thread (do (join 'a 'b) (join 'b 'd))))")
+         '(b . d)))
+  (is (= (ev "(do (thread (do (join 'a 'b)))
+                  (thread
+                    (atomic (do (join 'a 'b) (join 'b 'd)))))")
+         '(a . b))))
