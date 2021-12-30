@@ -181,5 +181,7 @@
   (is (= (ev "(insert < 3 '(1 2 4 5))") '(1 2 3 4 5)))
   (is (= (ev "(sort < '(5 1 3 2 4))") '(1 2 3 4 5)))
   (is (= (ev "(best > '(1 2 4 5))") 5))
-  (is (= (ev "(best (of > len) '((a) (b c) (d e) (f)))") '(b c))))
-
+  (is (= (ev "(best (of > len) '((a) (b c) (d e) (f)))") '(b c)))
+  (is (= (ev "(do (thread (do (join 'a 'b)))
+                (thread (do (join 'a 'b) (join 'b 'd))))")
+         '(b . d))))

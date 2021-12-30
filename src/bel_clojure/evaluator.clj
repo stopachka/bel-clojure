@@ -721,7 +721,6 @@
   (let [lock (some-> es last first :dyn (get 'lock))]
     (and lock (not= lock m/bel-nil))))
 
-
 (defn bel-eval [threads]
   (loop [threads threads]
     (let [[top-thread & rest-threads] threads
@@ -735,19 +734,18 @@
 
         (start-thread-command? top-form)
         (recur
-          (into [(start-thread-command->thread top-form)
-                 [tid (drop-lastv es) rs]]
-                rest-threads))
+         (into [(start-thread-command->thread top-form)
+                [tid (drop-lastv es) rs]]
+               rest-threads))
         :else
         (let [[es' rs'] (bel-eval-step es rs)
-              thread' [tid es' rs'] ]
+              thread' [tid es' rs']]
           (recur
-            (if (locking? es')
-              (into [thread'] rest-threads)
-              (into rest-threads [thread']))))))))
+           (if (locking? es')
+             (into [thread'] rest-threads)
+             (into (vec rest-threads) [thread']))))))))
 
 (defn bel-eval-single [env form]
-  (println ">" form)
   (bel-eval [[(gensym) [[env form]] []]]))
 
 (defn eval-all
