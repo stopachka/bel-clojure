@@ -1,5 +1,6 @@
 {:paths ["src" "resources"]
- :deps {instaparse/instaparse {:mvn/version "1.4.10"}}
+ :deps {org.clojure/clojure {:mvn/version "1.10.3"}
+        instaparse/instaparse {:mvn/version "1.4.10"}}
  :aliases  {:repl {:main-opts ["-m" "bel-clojure.core"]
                    :exec-fn bel-clojure.core/-main}
             :test {:extra-deps {io.github.cognitect-labs/test-runner
