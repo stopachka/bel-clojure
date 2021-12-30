@@ -33,7 +33,7 @@
 
 (defn p
   ([a b]
-   (ArrayList. [:pair a b] )))
+   (ArrayList. [:pair a b])))
 
 ;; ---------
 ;; Constants
@@ -79,7 +79,9 @@
   (let [id-f (if (bel-pair? a) identical? =)]
     (if (id-f a b) bel-t bel-nil)))
 
-(defn p-join [a b] (p a b))
+(defn p-join [a b]
+  (p a
+     (if (bel-string? b) (<-pairs b) b)))
 
 (defn p-car [form]
   (cond
