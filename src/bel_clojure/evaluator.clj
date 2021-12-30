@@ -145,7 +145,6 @@
 
 (defn bel-compare [a b]
   (let [f (condp = (m/p-type a)
-            'string list-compare
             'pair list-compare
             base-compare)]
     (f a b)))
