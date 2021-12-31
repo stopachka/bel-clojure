@@ -1,4 +1,5 @@
 (ns bel-clojure.model
+  (:refer-clojure :rename {type clj-type})
   (:import
    (java.util ArrayList)))
 
@@ -18,7 +19,6 @@
 (def bel-number? number?)
 (defn bel-pair? [a] (and (seqable? a) (= :pair (first a))))
 
-(def clj-type type)
 (defn type [x]
   (cond
     (bel-symbol? x) 'symbol
