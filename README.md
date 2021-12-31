@@ -87,7 +87,6 @@ To make the interpreter tolerably fast, **I tweaked the source in three ways**
 This isn't done yet. **There's 3 todos remaining**
 
 1. Streams. I didn’t implement streams yet. I think the best plan would be to leak Java streams, and I wanted to think about it.
-2. Virfns. Numbers don't yet work as functions.
 3. Performance tuning. I made some tweaks, but there's a lot of low-hanging fruit still.
 
 This has been a lot of fun to write. I hope it’s as fun for you to play with it.
