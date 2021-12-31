@@ -18,14 +18,15 @@
 (def bel-number? number?)
 (defn bel-pair? [a] (and (seqable? a) (= :pair (first a))))
 
-(defn p-type [x]
+(def clj-type type)
+(defn type [x]
   (cond
     (bel-symbol? x) 'symbol
     (bel-string? x) 'string
     (bel-char? x) 'char
     (bel-number? x) 'number
-    (= (type x) java.util.HashMap) 'mut-map
-    (= (type x) clojure.lang.PersistentArrayMap) 'imm-map
+    (= (clj-type x) java.util.HashMap) 'mut-map
+    (= (clj-type x) clojure.lang.PersistentArrayMap) 'imm-map
     :else (symbol (first x))))
 
 ;; ---------
@@ -60,10 +61,10 @@
 ;; -------------
 ;; Pair Helpers
 
-(defn make-quoted-pair [a]
+(defn quoted-p [a]
   (p bel-quote a))
 
-(defn <-pairs
+(defn seq->p
   [xs]
   (let [[x n & after-n] xs
         after-x (rest xs)]
@@ -73,17 +74,17 @@
        x
        (if (= bel-dot n)
          (first-and-only after-n "dotted list _must_ have 1 exp after the dot")
-         (<-pairs after-x))))))
+         (seq->p after-x))))))
 
-(defn p-id [a b]
+(defn id [a b]
   (let [id-f (if (bel-pair? a) identical? =)]
     (if (id-f a b) bel-t bel-nil)))
 
-(defn p-join [a b]
+(defn join [a b]
   (p a
-     (if (bel-string? b) (<-pairs b) b)))
+     (if (bel-string? b) (seq->p b) b)))
 
-(defn p-car [form]
+(defn car [form]
   (cond
     (= bel-nil form) form
 
@@ -95,11 +96,11 @@
     :else
     (second form)))
 
-(defn p-cdr [form]
+(defn cdr [form]
   (cond
     (= bel-nil form) form
 
-    (bel-string? form) (<-pairs (rest form))
+    (bel-string? form) (seq->p (rest form))
 
     (not (bel-pair? form))
     (throw (Exception. (format "expected pair, got = %s" form)))
@@ -107,44 +108,39 @@
     :else
     (last form)))
 
-(defn pair->clojure-seq [form]
+(defn p->seq [form]
   (if (= bel-nil form)
     ()
     (cons
-     (p-car form)
-     (let [r (p-cdr form)]
+     (car form)
+     (let [r (cdr form)]
        (cond
-         (bel-pair? r) (pair->clojure-seq r)
+         (bel-pair? r) (p->seq r)
          (= bel-nil r) []
          :else [r])))))
 
-(defn p-xar [form y]
+(defn xar [form y]
   (.set form 1 y)
   form)
 
-(defn p-xdr [form y]
+(defn xdr [form y]
   (.set form 2 y)
   form)
 
-(def p-sym symbol)
+(def sym symbol)
 
-(def p-nom name)
+(def nom name)
 
-(defn p-coin [] (rand-nth [bel-t bel-nil]))
+(defn coin [] (rand-nth [bel-t bel-nil]))
 
-(defn pair-append [a b]
+(defn p-append [a b]
   (cond
     (= bel-nil a) b
-    (= bel-nil (p-cdr a)) (p (p-car a) b)
+    (= bel-nil (cdr a)) (p (car a) b)
     :else
     (p
-     (p-car a)
-     (pair-append (p-cdr a) b))))
-
-(defn pair-every? [f p]
-  (if (= bel-nil p) true
-      (and (f (p-car p))
-           (pair-every? f (p-cdr p)))))
+     (car a)
+     (p-append (cdr a) b))))
 
 ;; ---------
 ;; Variable
@@ -159,7 +155,7 @@
 
 (defn bel-optional-var [[_ _h [_ variable]]] variable)
 
-(defn bel-optional-arg [[_ _h [_ _variable r]]] (p-car r))
+(defn bel-optional-arg [[_ _h [_ _variable r]]] (car r))
 
 ;; ---------
 ;; Typecheck
@@ -169,7 +165,7 @@
 
 (defn bel-typecheck-var [[_ _h [_ variable]]] variable)
 
-(defn bel-typecheck-f [[_ _h [_ _variable r]]] (p-car r))
+(defn bel-typecheck-f [[_ _h [_ _variable r]]] (car r))
 
 ;; -------
 ;; Interop

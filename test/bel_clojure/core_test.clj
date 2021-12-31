@@ -8,7 +8,8 @@
 (def env (delay (bootstrap-env)))
 
 (defn ev [& strs]
-  (r/bel->pretty-clj (last (e/eval-all @env strs))))
+  (r/bel->pretty (last (e/eval-all @env strs))))
+
 
 (deftest core-test
   (is (= (ev "(no nil)") 't))

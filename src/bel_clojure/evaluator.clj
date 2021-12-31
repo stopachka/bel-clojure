@@ -14,7 +14,7 @@
 (defn in-where? [es]
   (= (second (last es)) [:where]))
 
-(defn p-where [es rs env x]
+(defn b-where [es rs env x]
   [(conj es
          [env [:where]]
          [env x])
@@ -54,12 +54,12 @@
          (conj rs
                (m/p v-pair (m/p m/bel-d m/bel-nil)))]
         [es
-         (conj rs (m/p-cdr v-pair))]))))
+         (conj rs (m/cdr v-pair))]))))
 
 ;; ----------
-;; p-thread
+;; thread
 
-(defn p-thread [es rs env form]
+(defn b-thread [es rs env form]
   [(conj
     es
     [env [:start-thread env form]])
@@ -82,7 +82,7 @@
            [env after])
      rest-rs]))
 
-(defn p-dyn [es rs env variable arg after]
+(defn b-dyn [es rs env variable arg after]
   [(conj
     es
     [env [:dyn-2 variable after]]
@@ -95,7 +95,7 @@
 (defn bel-eval-cont [_es _rs _env litv args-head]
   (let [[_ f] litv
         [es rs] (f)]
-    [es (conj rs (m/p-car args-head))]))
+    [es (conj rs (m/car args-head))]))
 
 (defn bel-eval-ccc-2 [es rs env _form]
   (let [f-evaled (last rs)
@@ -106,11 +106,11 @@
        (m/p
         f-evaled
         (m/p
-         (m/<-pairs [m/bel-lit m/bel-cont (fn [] [es rest-rs])])
+         (m/seq->p [m/bel-lit m/bel-cont (fn [] [es rest-rs])])
          m/bel-nil))])
      rest-rs]))
 
-(defn p-ccc [es rs env f]
+(defn b-ccc [es rs env f]
   [(conj
     es
     [env [:ccc-2]]
@@ -120,19 +120,19 @@
 ;; ---
 ;; err
 
-(defn p-err [_es _rs _env e]
+(defn b-err [_es _rs _env e]
   [[] [[:err e]]])
 
 ;; -----
 ;; debug
 
-(defn p-debug
-  [x] (println "[DEBUG] " (r/bel->pretty-clj x)))
+(defn b-debug
+  [x] (println "[DEBUG] " (r/bel->pretty x)))
 
 ;; ----
 ;; uvar
 
-(def p-uvar gensym)
+(def b-uvar gensym)
 
 ;; ----
 ;; bin<
@@ -144,21 +144,21 @@
 
 (defn list-compare
   [a b]
-  (let [c1 (m/p-car a)
-        c2 (m/p-car b)
+  (let [c1 (m/car a)
+        c2 (m/car b)
         v (bel-compare c1 c2)]
     (cond
       (not= 0 v) v
-      (not= m/bel-nil (m/p-cdr a)) (bel-compare (m/p-cdr a) (m/p-cdr b))
+      (not= m/bel-nil (m/cdr a)) (bel-compare (m/cdr a) (m/cdr b))
       :else v)))
 
 (defn bel-compare [a b]
-  (let [f (condp = (m/p-type a)
+  (let [f (condp = (m/type a)
             'pair list-compare
             base-compare)]
     (f a b)))
 
-(defn p-bin< [& xs]
+(defn b-bin< [& xs]
   (m/clj-bool->bel (neg? (apply bel-compare xs))))
 
 ;; ----
@@ -186,19 +186,19 @@
 
 (def prim-name->fn
   (merge
-   {"id" #'m/p-id
-    "car" #'m/p-car
-    "cdr" #'m/p-cdr
-    "join" #'m/p-join
-    "type" #'m/p-type
-    "xar" #'m/p-xar
-    "xdr" #'m/p-xdr
-    "sym" #'m/p-sym
-    "nom" #'m/p-nom
-    "coin" #'m/p-coin
-    "p-debug" #'p-debug
-    "uvar" #'p-uvar
-    "bin<" #'p-bin<
+   {"id" #'m/id
+    "car" #'m/car
+    "cdr" #'m/cdr
+    "join" #'m/join
+    "type" #'m/type
+    "xar" #'m/xar
+    "xdr" #'m/xdr
+    "sym" #'m/sym
+    "nom" #'m/nom
+    "coin" #'m/coin
+    "p-debug" #'b-debug
+    "uvar" #'b-uvar
+    "bin<" #'b-bin<
     "map-assoc" #'m/map-assoc}
    math-name->fn))
 
@@ -206,16 +206,16 @@
 ;; special-prims
 
 (def special-prim-name->fn
-  {"dyn" #'p-dyn
-   "ccc" #'p-ccc
-   "where" #'p-where
-   "err" #'p-err
-   "thread" #'p-thread})
+  {"dyn" #'b-dyn
+   "ccc" #'b-ccc
+   "where" #'b-where
+   "err" #'b-err
+   "thread" #'b-thread})
 
 ;; ---
 ;; Env
 
-(defn make-bel-globe []
+(defn bel-globe []
   (let [m (m/mut-map)]
     (->> (merge prim-name->fn special-prim-name->fn)
          (map (fn [[k]]
@@ -225,12 +225,12 @@
                    sym-k
                    (m/p
                     sym-k
-                    (m/<-pairs [m/bel-lit m/bel-prim sym-k]))))))
+                    (m/seq->p [m/bel-lit m/bel-prim sym-k]))))))
          doall)
     m))
 
-(defn make-env
-  ([] (make-env (make-bel-globe)))
+(defn env
+  ([] (env (bel-globe)))
   ([g]
    {:globe g
     :scope m/bel-nil
@@ -250,8 +250,8 @@
              (= m/bel-nil r)
              [env r]
 
-             (= m/bel-nil (m/p-cdr r))
-             [env (m/p-car r)]
+             (= m/bel-nil (m/cdr r))
+             [env (m/car r)]
              :else
              [env
               (m/p m/bel-if r)]))
@@ -315,13 +315,13 @@
 (defn bel-eval-prim-simple [es rs env [_ n simple-f]]
   (let [evaled-args (last rs)
         rest-rs (drop-lastv rs)
-        args (m/pair->clojure-seq evaled-args)]
+        args (m/p->seq evaled-args)]
     (try
       (if (in-where? es)
         [(drop-lastv es)
          (conj rs
                (m/p
-                (m/p-car evaled-args)
+                (m/car evaled-args)
                 (m/p
                  (condp = n
                    "car" m/bel-a
@@ -341,7 +341,7 @@
          rest-rs]))))
 
 (defn bel-eval-prim [es rs env litv args-head]
-  (let [n (name (m/p-car litv))
+  (let [n (name (m/car litv))
         simple-f (prim-name->fn n)
         special-f (special-prim-name->fn n)]
     (if simple-f
@@ -353,7 +353,7 @@
              (bel-nil-args
               special-f
               (concat [es rs env]
-                      (m/pair->clojure-seq args-head)))))))
+                      (m/p->seq args-head)))))))
 
 ;; -----------
 ;; assign-vars
@@ -435,9 +435,9 @@
     :else
     [(conj es
            [env [:assign-vars-rest
-                 (m/p-cdr var-head) (m/p-cdr arg-head)]]
+                 (m/cdr var-head) (m/cdr arg-head)]]
            [env [:assign-vars-1
-                 (m/p-car var-head) (m/p-car arg-head)]])
+                 (m/car var-head) (m/car arg-head)]])
      rs]))
 
 ;; ------------
@@ -498,11 +498,11 @@
 
 (defn bel-eval-many-2 [es rs _env [_ rs-cnt]]
   (let [rest-rs (vec (take rs-cnt rs))
-        evaled-pairs (m/<-pairs (reverse (drop rs-cnt rs)))]
+        evaled-pairs (m/seq->p (reverse (drop rs-cnt rs)))]
     [es (conj rest-rs evaled-pairs)]))
 
 (defn bel-eval-many-1 [es rs env [_ args-head]]
-  (let [pairs-to-eval (m/pair->clojure-seq args-head)]
+  (let [pairs-to-eval (m/p->seq args-head)]
     [(vec
       (concat
        (conj es [env [:eval-many-2 (count rs)]])
@@ -533,15 +533,15 @@
 ;; -------------
 
 (defn apply-head->args-head [x]
-  (let [xs (m/pair->clojure-seq x)
+  (let [xs (m/p->seq x)
         but-last (drop-last xs)
         l (last xs)
         ls (if (m/bel-pair? l)
-             (m/pair->clojure-seq l)
+             (m/p->seq l)
              [l])]
     (->> (concat but-last ls)
-         (map m/make-quoted-pair)
-         m/<-pairs)))
+         (map m/quoted-p)
+         m/seq->p)))
 
 (defn bel-eval-apply-2 [es rs env [_ f]]
   (let [evaled-apply-head (last rs)
@@ -589,7 +589,7 @@
     [es
      (conj
       rest-rs
-      (m/pair-append
+      (m/p-append
        h-evaled
        r-evaled))]))
 
@@ -614,7 +614,7 @@
        r-evaled))]))
 
 (defn bel-eval-backquote [es rs env [_ form]]
-  (let [t (m/p-type form)]
+  (let [t (m/type form)]
     (cond
       (= t 'comma)
       [(conj es [env (second form)])
@@ -625,7 +625,7 @@
 
       :else
       (let [[_ h r] form
-            h-t (m/p-type h)]
+            h-t (m/type h)]
         (cond
           (= h-t 'comma)
           [(conj
@@ -657,9 +657,9 @@
 ;; bel-eval
 
 (defn literal? [form]
-  (or (#{'clj-err 'char 'number} (m/p-type form))
+  (or (#{'clj-err 'char 'number} (m/type form))
       (#{m/bel-nil m/bel-t m/bel-o m/bel-apply} form)
-      (and (m/bel-pair? form) (#{m/bel-lit} (m/p-car form)))
+      (and (m/bel-pair? form) (#{m/bel-lit} (m/car form)))
       (m/bel-string? form)))
 
 (def step->fn
@@ -706,7 +706,7 @@
 (defn debug-loop [tid es rs]
   (println "tid:" tid)
   (println "in:")
-  (mapv (comp println r/bel->pretty-clj second) es)
+  (mapv (comp println r/bel->pretty second) es)
   (println "out:")
   (mapv println rs)
   (println "---"))

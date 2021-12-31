@@ -32,7 +32,7 @@
   (form-transform
    :list
    (fn [[_t & children]]
-     (m/<-pairs children))))
+     (m/seq->p children))))
 
 ;; -------
 ;; string 
@@ -49,7 +49,7 @@
 (def quote->pair
   (form-transform :quote
                   (fn [[_ exp]]
-                    (m/make-quoted-pair exp))))
+                    (m/quoted-p exp))))
 
 ;; ----------
 ;; abbrev-fn
@@ -62,7 +62,7 @@
                      (m/p
                       (m/p '_ m/bel-nil)
                       (m/p
-                       (m/<-pairs xs)
+                       (m/seq->p xs)
                        m/bel-nil))))))
 
 ;; ----------
@@ -105,7 +105,7 @@
    'compose
    (->> (concat left-xs right-xs)
         (remove (fn [x] (and (seqable? x) (= (first x) :comp_id))))
-        m/<-pairs)))
+        m/seq->p)))
 
 (defn handle-abbrev-sym [x]
   (if
@@ -176,23 +176,23 @@
   (comp (partial walk/postwalk parse-postwalk) parse-string cstring/trim))
 
 ;; ----------------
-;; bel->pretty-clj
+;; bel->pretty
 
-(defn bel->pretty-clj [form]
-  (condp = (m/p-type form)
+(defn bel->pretty [form]
+  (condp = (m/type form)
     'symbol (if (= m/bel-nil form) nil form)
-    'backquote (list 'bq (bel->pretty-clj (second form)))
-    'comma (list 'cm (bel->pretty-clj (second form)))
-    'splice (list 'spl (bel->pretty-clj (second form)))
-    'err (list 'err (bel->pretty-clj (second form)))
+    'backquote (list 'bq (bel->pretty (second form)))
+    'comma (list 'cm (bel->pretty (second form)))
+    'splice (list 'spl (bel->pretty (second form)))
+    'err (list 'err (bel->pretty (second form)))
     'char form
     'number form
     'string form
     'pair
     (let [[_ a b] form]
-      (concat [(bel->pretty-clj a)]
+      (concat [(bel->pretty a)]
               (cond
                 (= m/bel-nil b) nil
-                (m/bel-pair? b) (bel->pretty-clj b)
-                :else ['. (bel->pretty-clj b)])))
+                (m/bel-pair? b) (bel->pretty b)
+                :else ['. (bel->pretty b)])))
     form))

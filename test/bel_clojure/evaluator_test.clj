@@ -1,14 +1,14 @@
 (ns bel-clojure.evaluator-test
   (:require
    [bel-clojure.reader :as r]
-   [bel-clojure.evaluator :refer :all]
-   [clojure.test :refer :all]))
+   [clojure.test :refer :all]
+   [bel-clojure.evaluator :refer :all]))
 
 (defn ev-all [env strs]
-  (mapv r/bel->pretty-clj (eval-all env strs)))
+  (mapv r/bel->pretty (eval-all env strs)))
 
 (defn ev [& strs]
-  (last (ev-all (make-env) strs)))
+  (last (ev-all (env) strs)))
 
 (deftest test-evaluator
   (is (= (ev "nil") nil))
@@ -54,13 +54,13 @@
          '(x a y t)))
   (is (= (ev "(set y '(c d))" "`(a b ,@y e f)")
          '(a b c d e f)))
-  (is (= (take-last 2 (ev-all (make-env)
+  (is (= (take-last 2 (ev-all (env)
                               ["(set x 'a)"
                                "x"
                                "(dyn x 'z (join x 'b))"
                                "x"]))
          '((z . b) a)))
-  (is (= (take-last 2 (ev-all (make-env)
+  (is (= (take-last 2 (ev-all (env)
                               ["(join 'a (ccc (lit clo nil (c) (set cont c))))"
                                "(cont 'b)"
                                "(cont 'c)"]))
@@ -72,7 +72,7 @@
           "(dyn err (lit clo nil (x) 'hello) (car 'a))")
          'hello))
   (is (= (ev "((lit clo nil ((t x (lit clo nil (x) (id t x)))) 'hello) t)")
-       'hello))
+         'hello))
   (is (= (ev
           "((lit clo nil ((t x (lit clo nil (x) (id t x)))) 'hello) nil)")
          '(err (qt . mistype))))

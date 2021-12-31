@@ -1,9 +1,9 @@
 (ns bel-clojure.reader-test
   (:require
-   [bel-clojure.reader :refer :all]
-   [clojure.test :refer :all]))
+   [clojure.test :refer :all]
+   [bel-clojure.reader :refer :all]))
 
-(defn pretty-parse  [x] (bel->pretty-clj (bel-parse x)))
+(defn pretty-parse  [x] (bel->pretty (bel-parse x)))
 
 (deftest test-reader
   (is (= (pretty-parse "\"str\"") "str"))

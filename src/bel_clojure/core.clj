@@ -16,7 +16,7 @@
        (remove cstring/blank?)))
 
 (defn bootstrap-env []
-  (let [env (e/make-env)]
+  (let [env (e/env)]
     (e/eval-all env (source-str->parts (slurp (io/resource "core.bel"))))
     env))
 
@@ -45,7 +45,7 @@
   (loop []
     (let [form (read-form)]
       (println "> "
-               (r/bel->pretty-clj
+               (r/bel->pretty
                 (e/bel-eval-single
                  env form)))
       (recur))))

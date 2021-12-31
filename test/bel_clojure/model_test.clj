@@ -1,37 +1,37 @@
 (ns bel-clojure.model-test
   (:require
    [bel-clojure.reader :as r]
-   [bel-clojure.model :refer :all]
-   [clojure.test :refer :all]))
+   [clojure.test :refer :all]
+   [bel-clojure.model :refer :all]))
 
 (defn pretty-f [f & args]
-  (r/bel->pretty-clj (apply f (map r/bel-parse args))))
+  (r/bel->pretty (apply f (map r/bel-parse args))))
 
 (deftest test-model
-  (is (= (pretty-f p-id "a" "a") 't))
-  (is (= (pretty-f p-id "a" "b") nil))
-  (is (= (pretty-f p-id "(a)" "(a)") nil))
-  (is (= (pretty-f p-join  "a" "b") '(a . b)))
-  (is (= (pretty-f p-car "(a b c)") 'a))
-  (is (= (pretty-f p-car "nil") nil))
-  (is (= (pretty-f p-car "\"foo\"") \f))
-  (is (= (pretty-f p-cdr "(a . b)") 'b))
-  (is (= (pretty-f p-cdr "(a b)") '(b)))
-  (is (= (pretty-f p-cdr "nil") nil))
-  (is (= (pretty-f p-cdr "\"foo\"") '(\o \o)))
-  (is (= (pretty-f p-type "a") 'symbol))
-  (is (= (pretty-f p-type "(a b)") 'pair))
-  (is (= (pretty-f p-type "\\a") 'char))
-  (is (= (pretty-f p-type "\"a\"") 'string))
+  (is (= (pretty-f id "a" "a") 't))
+  (is (= (pretty-f id "a" "b") nil))
+  (is (= (pretty-f id "(a)" "(a)") nil))
+  (is (= (pretty-f join  "a" "b") '(a . b)))
+  (is (= (pretty-f car "(a b c)") 'a))
+  (is (= (pretty-f car "nil") nil))
+  (is (= (pretty-f car "\"foo\"") \f))
+  (is (= (pretty-f cdr "(a . b)") 'b))
+  (is (= (pretty-f cdr "(a b)") '(b)))
+  (is (= (pretty-f cdr "nil") nil))
+  (is (= (pretty-f cdr "\"foo\"") '(\o \o)))
+  (is (= (pretty-f type "a") 'symbol))
+  (is (= (pretty-f type "(a b)") 'pair))
+  (is (= (pretty-f type "\\a") 'char))
+  (is (= (pretty-f type "\"a\"") 'string))
   (let [p (r/bel-parse "(a . b)")
         c (r/bel-parse "c")]
-    (p-xar p c)
-    (is (= (p-car p) c)))
+    (xar p c)
+    (is (= (car p) c)))
   (let [p (r/bel-parse "(a . b)")
         c (r/bel-parse "c")]
-    (p-xdr p c)
-    (is (= (p-cdr p) c)))
-  (is (= (pretty-f p-sym "\"foo\"") 'foo))
-  (is (= (pretty-f p-nom "foo") "foo"))
+    (xdr p c)
+    (is (= (cdr p) c)))
+  (is (= (pretty-f sym "\"foo\"") 'foo))
+  (is (= (pretty-f nom "foo") "foo"))
   (is (= (map-assoc bel-nil 'foo 1) {'foo 1}))
   (is (= (map-dissoc bel-nil {'foo 1}) bel-nil)))
