@@ -24,7 +24,7 @@
 ;; --------
 ;; variable
 
-(defn make-env-pair [sym v]
+(defn env-pair [sym v]
   (assert (m/bel-variable? sym)
           (format "expected left-side to be a variable= %s" sym))
   (m/p sym v))
@@ -40,7 +40,7 @@
             (format "expected value for variable = %s" form))
     v))
 
-(defn bel-eval-variable [es rs env form]
+(defn eval-variable [es rs env form]
   (cond
     (= m/bel-globe form)
     [es (conj rs (:globe env))]
@@ -77,7 +77,7 @@
   (let [ev (last rs)
         rest-rs (drop-lastv rs)
         {:keys [dyn]} env]
-    (m/map-put dyn variable (make-env-pair variable ev))
+    (m/map-put dyn variable (env-pair variable ev))
     [(conj es
            [env [:dyn-remove variable]]
            [env after])
@@ -93,7 +93,7 @@
 ;; ----
 ;; ccc
 
-(defn bel-eval-cont [_es _rs _env litv args-head]
+(defn eval-cont [_es _rs _env litv args-head]
   (let [[_ f] litv
         [es rs] (f)]
     [es (conj rs (m/car args-head))]))
@@ -238,7 +238,7 @@
     :dyn (m/mut-map)}))
 
 ;; ------------
-;; bel-eval-if
+;; eval-if
 
 (defn eval-if-2 [es rs env [_ [_ consequent-form r]]]
   (let [evaled-test-form (last rs)
@@ -258,14 +258,14 @@
               (m/p m/bel-if r)]))
      rest-rs]))
 
-(defn bel-eval-if-1 [es rs env [_ test-form r]]
+(defn eval-if-1 [es rs env [_ test-form r]]
   [(conj es
          [env [:if-2 r]]
          [env test-form])
    rs])
 
 ;; ------------
-;; bel-eval-set
+;; eval-set
 
 (defn eval-set-2 [es rs {:keys [globe] :as _env} form]
   (let [[_ sym] form
@@ -274,10 +274,10 @@
     (m/map-put
      globe
      sym
-     (make-env-pair sym evaled-v))
+     (env-pair sym evaled-v))
     [es (conj rest-rs)]))
 
-(defn bel-eval-set-1 [es rs env form]
+(defn eval-set-1 [es rs env form]
   (let [[_ sym after-sym] form
         _ (assert (not= m/bel-nil after-sym)
                   "Set sym needs a value")
@@ -290,7 +290,7 @@
            [env v])
      rs]))
 
-;; bel-eval-application
+;; eval-application
 ;; --------------------
 
 (defn lit-type [[_ _lit [_ t]]] t)
@@ -304,7 +304,7 @@
   form)
 
 ;; -------------
-;; bel-eval-prim
+;; eval-prim
 
 (defn bel-nil-args [f args]
   (let [arglist (->> f meta :arglists first)
@@ -341,7 +341,7 @@
                              m/bel-nil))])
          rest-rs]))))
 
-(defn bel-eval-prim [es rs env litv args-head]
+(defn eval-prim [es rs env litv args-head]
   (let [n (name (m/car litv))
         simple-f (prim-name->fn n)
         special-f (special-prim-name->fn n)]
@@ -412,7 +412,7 @@
               (m/map-assoc
                scope
                var-head
-               (make-env-pair
+               (env-pair
                 var-head
                 arg-head)))]
 
@@ -442,7 +442,7 @@
      rs]))
 
 ;; ------------
-;; bel-eval-clo
+;; eval-clo
 
 (defn eval-clo-2 [es rs env [_ body-head]]
   (let [scope (last rs)
@@ -451,18 +451,18 @@
            [(assoc env :scope scope) body-head])
      rest-rs]))
 
-(defn bel-clo-es [env litv args-head]
+(defn clo-expression-stack [env litv args-head]
   (let [[_ scope [_ args-sym-head [_ body-head]]] litv]
     [[env [:eval-clo-2 body-head]]
      [(assoc env :scope scope)
       [:assign-vars-1 args-sym-head args-head]]]))
 
-(defn bel-eval-clo [es rs env litv args-head]
-  [(into es (bel-clo-es env litv args-head))
+(defn eval-clo [es rs env litv args-head]
+  [(into es (clo-expression-stack env litv args-head))
    rs])
 
 ;; ------------
-;; bel-eval-mac
+;; eval-mac
 
 (defn eval-mac-2 [es rs env _form]
   (let [code (last rs)
@@ -470,15 +470,15 @@
     [(conj es [env code])
      rest-rs]))
 
-(defn bel-eval-mac-1 [es rs env litv args-head]
+(defn eval-mac-1 [es rs env litv args-head]
   (let [[_ [_ _ [_ _ clo]]] litv]
     [(into es
            (concat [[env [:eval-mac-2]]]
-                   (bel-clo-es env clo args-head)))
+                   (clo-expression-stack env clo args-head)))
      rs]))
 
 ;; ------------
-;; bel-eval-lit
+;; eval-lit
 
 (defn eval-lit-1 [es rs env [_ evaled-lit]]
   (let [args-head (last rs)
@@ -486,16 +486,16 @@
         litv (lit-v evaled-lit)]
     (condp = (lit-type evaled-lit)
       m/bel-prim
-      (bel-eval-prim es rest-rs env litv args-head)
+      (eval-prim es rest-rs env litv args-head)
       m/bel-clo
-      (bel-eval-clo es rest-rs env litv args-head)
+      (eval-clo es rest-rs env litv args-head)
       m/bel-mac
-      (bel-eval-mac-1 es rest-rs env litv args-head)
+      (eval-mac-1 es rest-rs env litv args-head)
       m/bel-cont
-      (bel-eval-cont es rest-rs env litv args-head))))
+      (eval-cont es rest-rs env litv args-head))))
 
 ;; --------------
-;; bel-eval-many
+;; eval-many
 
 (defn eval-many-2 [es rs _env [_ rs-cnt]]
   (let [rest-rs (vec (take rs-cnt rs))
@@ -511,7 +511,7 @@
      rs]))
 
 ;; --------------------
-;; bel-eval-application
+;; eval-application
 
 (defn eval-application-2 [es rs env [_ args-head]]
   (let [evaled-lit (assert-lit (last rs))
@@ -524,13 +524,13 @@
              [env [:eval-many-1 args-head]])
        rest-rs])))
 
-(defn bel-eval-application-1 [es rs env [_ f args-head :as _form]]
+(defn eval-application-1 [es rs env [_ f args-head :as _form]]
   [(conj es
          [env [:application-2 args-head]]
          [env f])
    rs])
 
-;; bel-eval-apply
+;; eval-apply
 ;; -------------
 
 (defn apply-head->args-head [x]
@@ -553,7 +553,7 @@
             f (apply-head->args-head evaled-apply-head))])
      rest-rs]))
 
-(defn bel-eval-apply-1 [es rs env [_ f apply-head :as _form]]
+(defn eval-apply-1 [es rs env [_ f apply-head :as _form]]
   [(conj
     es
     [env [:eval-apply-2 f]]
@@ -561,18 +561,18 @@
    rs])
 
 ;; -------------
-;; bel-eval-pair
+;; eval-pair
 
 (defn eval-pair [es rs env [_ l r :as form]]
   (cond
     (= m/bel-quote l) [es (conj rs r)]
-    (= m/bel-set l) (bel-eval-set-1 es rs env r)
-    (= m/bel-if l) (bel-eval-if-1 es rs env r)
-    (= m/bel-apply l) (bel-eval-apply-1 es rs env r)
-    :else (bel-eval-application-1 es rs env form)))
+    (= m/bel-set l) (eval-set-1 es rs env r)
+    (= m/bel-if l) (eval-if-1 es rs env r)
+    (= m/bel-apply l) (eval-apply-1 es rs env r)
+    :else (eval-application-1 es rs env form)))
 
 ;; ------------------
-;; bel-eval-backquote
+;; eval-backquote
 
 (defn eval-bq-comma-1 [es rs _env _form]
   (let [[r-evaled h-evaled] (take-last 2 rs)
@@ -655,7 +655,7 @@
            rs])))))
 
 ;; --------
-;; bel-eval
+;; eval
 
 (defn literal? [form]
   (or (#{'clj-err 'char 'number} (m/type form))
@@ -698,7 +698,7 @@
       [rest-es (conj rs form)]
 
       (m/bel-variable? form)
-      (bel-eval-variable rest-es rs env form)
+      (eval-variable rest-es rs env form)
 
       :else
       (let [f (step->fn (first form))]
