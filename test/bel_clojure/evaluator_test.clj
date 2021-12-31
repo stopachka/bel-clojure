@@ -1,4 +1,5 @@
 (ns bel-clojure.evaluator-test
+  (:refer-clojure :exclude [eval])
   (:require
    [bel-clojure.reader :as r]
    [clojure.test :refer :all]

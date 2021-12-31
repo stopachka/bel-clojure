@@ -1,4 +1,5 @@
 (ns bel-clojure.model-test
+  (:refer-clojure :exclude [eval char? string? number? symbol? type])
   (:require
    [bel-clojure.reader :as r]
    [clojure.test :refer :all]
