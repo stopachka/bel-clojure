@@ -188,4 +188,5 @@
   (is (= (ev "(do (thread (do (join 'a 'b)))
                   (thread
                     (atomic (do (join 'a 'b) (join 'b 'd)))))")
-         '(a . b))))
+         '(a . b)))
+  (is (= (ev "(2 '(a b c))") 'b)))

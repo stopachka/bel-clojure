@@ -60,10 +60,12 @@
 ;; ----------
 ;; thread
 
-(defn b-thread [es rs env form]
+(declare env)
+
+(defn b-thread [es rs {:keys [globe] :as env1} form]
   [(conj
     es
-    [env [:start-thread env form]])
+    [env1 [:start-thread (assoc (env) :globe globe) form]])
    rs])
 
 ;; ----
@@ -514,15 +516,21 @@
 ;; eval-application
 
 (defn eval-application-2 [es rs env [_ args-head]]
-  (let [evaled-lit (assert-lit (last rs))
-        rest-rs (drop-lastv rs)
-        es' (conj es [env [:eval-lit-1 evaled-lit]])]
-    (if (#{m/bel-mac m/bel-prim}
-         (lit-type evaled-lit))
-      [es' (conj rest-rs args-head)]
-      [(conj es'
-             [env [:eval-many-1 args-head]])
-       rest-rs])))
+  (let [evaled (last rs)
+        rest-rs (drop-lastv rs)]
+    (if (m/number? evaled)
+      [(conj es
+             [env [:eval-lit-1 (m/cdr (get-variable env 'nth))]]
+             [env [:eval-many-1 (m/p evaled args-head)]])
+       rest-rs]
+      (let [evaled-lit (assert-lit evaled)
+            es' (conj es [env [:eval-lit-1 evaled-lit]])]
+        (if (#{m/bel-mac m/bel-prim}
+             (lit-type evaled-lit))
+          [es' (conj rest-rs args-head)]
+          [(conj es'
+                 [env [:eval-many-1 args-head]])
+           rest-rs])))))
 
 (defn eval-application-1 [es rs env [_ f args-head :as _form]]
   [(conj es

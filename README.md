@@ -28,6 +28,8 @@ This is PG's `examples`, recreated on this interpreter. You can note what's impl
 >  (a b c d e)
 (cons \h "ello")
 >  (h e l l o)
+(2 '(a b c))
+> b
 (set w '(a (b c) d (e f)))
 >  nil
 (find pair w)
