@@ -5,7 +5,7 @@
    [bel-clojure.model :refer :all]))
 
 (defn pretty-f [f & args]
-  (r/bel->pretty (apply f (map r/bel-parse args))))
+  (r/bel->pretty (apply f (map r/parse args))))
 
 (deftest test-model
   (is (= (pretty-f id "a" "a") 't))
@@ -23,12 +23,12 @@
   (is (= (pretty-f type "(a b)") 'pair))
   (is (= (pretty-f type "\\a") 'char))
   (is (= (pretty-f type "\"a\"") 'string))
-  (let [p (r/bel-parse "(a . b)")
-        c (r/bel-parse "c")]
+  (let [p (r/parse "(a . b)")
+        c (r/parse "c")]
     (xar p c)
     (is (= (car p) c)))
-  (let [p (r/bel-parse "(a . b)")
-        c (r/bel-parse "c")]
+  (let [p (r/parse "(a . b)")
+        c (r/parse "c")]
     (xdr p c)
     (is (= (cdr p) c)))
   (is (= (pretty-f sym "\"foo\"") 'foo))

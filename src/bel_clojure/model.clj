@@ -1,5 +1,9 @@
 (ns bel-clojure.model
-  (:refer-clojure :rename {type clj-type})
+  (:refer-clojure :rename {type clj-type
+                           symbol? clj-symbol?
+                           string? clj-string? 
+                           char? clj-char?
+                           number? clj-number?})
   (:import
    (java.util ArrayList)))
 
@@ -13,18 +17,18 @@
 ;; -------------
 ;; Primitive Types
 
-(def bel-string? string?)
-(def bel-char? char?)
-(def bel-symbol? symbol?)
-(def bel-number? number?)
-(defn bel-pair? [a] (and (seqable? a) (= :pair (first a))))
+(def string? clj-string?)
+(def char? clj-char?)
+(def symbol? clj-symbol?)
+(def number? clj-number?)
+(defn pair? [a] (and (seqable? a) (= :pair (first a))))
 
 (defn type [x]
   (cond
-    (bel-symbol? x) 'symbol
-    (bel-string? x) 'string
-    (bel-char? x) 'char
-    (bel-number? x) 'number
+    (symbol? x) 'symbol
+    (string? x) 'string
+    (char? x) 'char
+    (number? x) 'number
     (= (clj-type x) java.util.HashMap) 'mut-map
     (= (clj-type x) clojure.lang.PersistentArrayMap) 'imm-map
     :else (symbol (first x))))
@@ -77,20 +81,20 @@
          (seq->p after-x))))))
 
 (defn id [a b]
-  (let [id-f (if (bel-pair? a) identical? =)]
+  (let [id-f (if (pair? a) identical? =)]
     (if (id-f a b) bel-t bel-nil)))
 
 (defn join [a b]
   (p a
-     (if (bel-string? b) (seq->p b) b)))
+     (if (string? b) (seq->p b) b)))
 
 (defn car [form]
   (cond
     (= bel-nil form) form
 
-    (bel-string? form) (first form)
+    (string? form) (first form)
 
-    (not (bel-pair? form))
+    (not (pair? form))
     (throw (Exception. (format "expected pair, got = %s" form)))
 
     :else
@@ -100,9 +104,9 @@
   (cond
     (= bel-nil form) form
 
-    (bel-string? form) (seq->p (rest form))
+    (string? form) (seq->p (rest form))
 
-    (not (bel-pair? form))
+    (not (pair? form))
     (throw (Exception. (format "expected pair, got = %s" form)))
 
     :else
@@ -115,7 +119,7 @@
      (car form)
      (let [r (cdr form)]
        (cond
-         (bel-pair? r) (p->seq r)
+         (pair? r) (p->seq r)
          (= bel-nil r) []
          :else [r])))))
 
@@ -145,7 +149,7 @@
 ;; ---------
 ;; Variable
 
-(def bel-variable? bel-symbol?)
+(def bel-variable? symbol?)
 
 ;; ---------
 ;; Optional

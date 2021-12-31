@@ -29,7 +29,7 @@
    (let [x (read-line)
          new-ret (conj ret x)]
      (try
-       (let [v (r/bel-parse (cstring/join "\n" new-ret))]
+       (let [v (r/parse (cstring/join "\n" new-ret))]
          (assert (not (:index v)))
          v)
        (catch Throwable _e
@@ -46,7 +46,7 @@
     (let [form (read-form)]
       (println "> "
                (r/bel->pretty
-                (e/bel-eval-single
+                (e/eval-single
                  env form)))
       (recur))))
 

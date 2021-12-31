@@ -109,7 +109,7 @@
 
 (defn handle-abbrev-sym [x]
   (if
-   (or (m/bel-pair? x) (m/bel-symbol? x))
+   (or (m/pair? x) (m/symbol? x))
     x
     (let [[id f] (->> [["|" handle-bar]
                        ["." handle-dot]
@@ -172,7 +172,7 @@
    transform-number
    transform-char))
 
-(def bel-parse
+(def parse
   (comp (partial walk/postwalk parse-postwalk) parse-string cstring/trim))
 
 ;; ----------------
@@ -193,6 +193,6 @@
       (concat [(bel->pretty a)]
               (cond
                 (= m/bel-nil b) nil
-                (m/bel-pair? b) (bel->pretty b)
+                (m/pair? b) (bel->pretty b)
                 :else ['. (bel->pretty b)])))
     form))

@@ -1,4 +1,5 @@
 (ns bel-clojure.evaluator
+  (:refer-clojure :exclude [eval])
   (:require
    [bel-clojure.model :as m]
    [bel-clojure.reader :as r]))
@@ -68,11 +69,11 @@
 ;; ----
 ;; dyn
 
-(defn bel-eval-dyn-remove [es rs {:keys [dyn]} [_ variable]]
+(defn eval-dyn-remove [es rs {:keys [dyn]} [_ variable]]
   (m/map-delete dyn variable)
   [es rs])
 
-(defn bel-eval-dyn-2 [es rs env [_ variable after]]
+(defn eval-dyn-2 [es rs env [_ variable after]]
   (let [ev (last rs)
         rest-rs (drop-lastv rs)
         {:keys [dyn]} env]
@@ -97,7 +98,7 @@
         [es rs] (f)]
     [es (conj rs (m/car args-head))]))
 
-(defn bel-eval-ccc-2 [es rs env _form]
+(defn eval-ccc-2 [es rs env _form]
   (let [f-evaled (last rs)
         rest-rs (drop-lastv rs)]
     [(conj
@@ -239,7 +240,7 @@
 ;; ------------
 ;; bel-eval-if
 
-(defn bel-eval-if-2 [es rs env [_ [_ consequent-form r]]]
+(defn eval-if-2 [es rs env [_ [_ consequent-form r]]]
   (let [evaled-test-form (last rs)
         rest-rs (drop-lastv rs)]
     [(conj es
@@ -266,7 +267,7 @@
 ;; ------------
 ;; bel-eval-set
 
-(defn bel-eval-set-2 [es rs {:keys [globe] :as _env} form]
+(defn eval-set-2 [es rs {:keys [globe] :as _env} form]
   (let [[_ sym] form
         evaled-v (last rs)
         rest-rs (drop-lastv rs)]
@@ -312,7 +313,7 @@
                      args)]
     niled-args))
 
-(defn bel-eval-prim-simple [es rs env [_ n simple-f]]
+(defn eval-prim-simple [es rs env [_ n simple-f]]
   (let [evaled-args (last rs)
         rest-rs (drop-lastv rs)
         args (m/p->seq evaled-args)]
@@ -358,7 +359,7 @@
 ;; -----------
 ;; assign-vars
 
-(defn bel-assign-vars-typecheck-2 [es rs env [_ variable arg]]
+(defn assign-vars-typecheck-2 [es rs env [_ variable arg]]
   (let [check (last rs)
         rest-rs (drop-lastv rs)]
     (if (= m/bel-nil check)
@@ -375,7 +376,7 @@
                arg]])
        rest-rs])))
 
-(defn bel-assign-vars-typecheck-1 [es rs env [_ variable arg]]
+(defn assign-vars-typecheck-1 [es rs env [_ variable arg]]
   (let [evaled-f (last rs)
         rest-rs (drop-lastv rs)]
     [(conj es
@@ -386,14 +387,14 @@
                       m/bel-nil))])
      rest-rs]))
 
-(defn bel-assign-vars-optional-arg [es rs env [_ variable]]
+(defn assign-vars-optional-arg [es rs env [_ variable]]
   (let [arg-evaled (last rs)
         rest-rs (drop-lastv rs)]
     [(conj es
            [env [:assign-vars-1 variable arg-evaled]])
      rest-rs]))
 
-(defn bel-assign-vars-rest [es rs env [_ var-head arg-head]]
+(defn assign-vars-rest [es rs env [_ var-head arg-head]]
   (let [scope (last rs)
         rest-rs (drop-lastv rs)]
     [(conj es
@@ -401,7 +402,7 @@
             [:assign-vars-1 var-head arg-head]])
      rest-rs]))
 
-(defn bel-assign-vars-1 [es rs {:keys [scope] :as env} [_ var-head arg-head]]
+(defn assign-vars-1 [es rs {:keys [scope] :as env} [_ var-head arg-head]]
   (cond
     (every? (partial = m/bel-nil) [var-head arg-head])
     [es (conj rs scope)]
@@ -443,7 +444,7 @@
 ;; ------------
 ;; bel-eval-clo
 
-(defn bel-eval-clo-2 [es rs env [_ body-head]]
+(defn eval-clo-2 [es rs env [_ body-head]]
   (let [scope (last rs)
         rest-rs (drop-lastv rs)]
     [(conj es
@@ -463,7 +464,7 @@
 ;; ------------
 ;; bel-eval-mac
 
-(defn bel-eval-mac-2 [es rs env _form]
+(defn eval-mac-2 [es rs env _form]
   (let [code (last rs)
         rest-rs (drop-lastv rs)]
     [(conj es [env code])
@@ -479,7 +480,7 @@
 ;; ------------
 ;; bel-eval-lit
 
-(defn bel-eval-lit-1 [es rs env [_ evaled-lit]]
+(defn eval-lit-1 [es rs env [_ evaled-lit]]
   (let [args-head (last rs)
         rest-rs (drop-lastv rs)
         litv (lit-v evaled-lit)]
@@ -496,12 +497,12 @@
 ;; --------------
 ;; bel-eval-many
 
-(defn bel-eval-many-2 [es rs _env [_ rs-cnt]]
+(defn eval-many-2 [es rs _env [_ rs-cnt]]
   (let [rest-rs (vec (take rs-cnt rs))
         evaled-pairs (m/seq->p (reverse (drop rs-cnt rs)))]
     [es (conj rest-rs evaled-pairs)]))
 
-(defn bel-eval-many-1 [es rs env [_ args-head]]
+(defn eval-many-1 [es rs env [_ args-head]]
   (let [pairs-to-eval (m/p->seq args-head)]
     [(vec
       (concat
@@ -512,7 +513,7 @@
 ;; --------------------
 ;; bel-eval-application
 
-(defn bel-eval-application-2 [es rs env [_ args-head]]
+(defn eval-application-2 [es rs env [_ args-head]]
   (let [evaled-lit (assert-lit (last rs))
         rest-rs (drop-lastv rs)
         es' (conj es [env [:eval-lit-1 evaled-lit]])]
@@ -536,14 +537,14 @@
   (let [xs (m/p->seq x)
         but-last (drop-last xs)
         l (last xs)
-        ls (if (m/bel-pair? l)
+        ls (if (m/pair? l)
              (m/p->seq l)
              [l])]
     (->> (concat but-last ls)
          (map m/quoted-p)
          m/seq->p)))
 
-(defn bel-eval-apply-2 [es rs env [_ f]]
+(defn eval-apply-2 [es rs env [_ f]]
   (let [evaled-apply-head (last rs)
         rest-rs (drop-lastv rs)]
     [(conj
@@ -562,7 +563,7 @@
 ;; -------------
 ;; bel-eval-pair
 
-(defn bel-eval-pair [es rs env [_ l r :as form]]
+(defn eval-pair [es rs env [_ l r :as form]]
   (cond
     (= m/bel-quote l) [es (conj rs r)]
     (= m/bel-set l) (bel-eval-set-1 es rs env r)
@@ -573,7 +574,7 @@
 ;; ------------------
 ;; bel-eval-backquote
 
-(defn bel-eval-bq-comma-1 [es rs _env _form]
+(defn eval-bq-comma-1 [es rs _env _form]
   (let [[r-evaled h-evaled] (take-last 2 rs)
         rest-rs (drop-lastv 2 rs)]
     [es
@@ -583,7 +584,7 @@
        h-evaled
        r-evaled))]))
 
-(defn bel-eval-bq-splice-1 [es rs _env _form]
+(defn eval-bq-splice-1 [es rs _env _form]
   (let [[r-evaled h-evaled] (take-last 2 rs)
         rest-rs (drop-lastv 2 rs)]
     [es
@@ -593,7 +594,7 @@
        h-evaled
        r-evaled))]))
 
-(defn bel-eval-bq-pair-1 [es rs _env _form]
+(defn eval-bq-pair-1 [es rs _env _form]
   (let [[r-evaled h-evaled] (take-last 2 rs)
         rest-rs (drop-lastv 2 rs)]
     [es
@@ -603,7 +604,7 @@
        h-evaled
        r-evaled))]))
 
-(defn bel-eval-bq-rest-1 [es rs _env [_ h]]
+(defn eval-bq-rest-1 [es rs _env [_ h]]
   (let [r-evaled (last rs)
         rest-rs (drop-lastv rs)]
     [es
@@ -613,7 +614,7 @@
        h
        r-evaled))]))
 
-(defn bel-eval-backquote [es rs env [_ form]]
+(defn eval-backquote [es rs env [_ form]]
   (let [t (m/type form)]
     (cond
       (= t 'comma)
@@ -659,36 +660,36 @@
 (defn literal? [form]
   (or (#{'clj-err 'char 'number} (m/type form))
       (#{m/bel-nil m/bel-t m/bel-o m/bel-apply} form)
-      (and (m/bel-pair? form) (#{m/bel-lit} (m/car form)))
-      (m/bel-string? form)))
+      (and (m/pair? form) (#{m/bel-lit} (m/car form)))
+      (m/string? form)))
 
 (def step->fn
-  {:pair bel-eval-pair
-   :set-2 bel-eval-set-2
-   :if-2 bel-eval-if-2
-   :application-2 bel-eval-application-2
-   :eval-many-1 bel-eval-many-1
-   :eval-many-2 bel-eval-many-2
-   :eval-lit-1 bel-eval-lit-1
-   :eval-prim-simple bel-eval-prim-simple
-   :eval-mac-2 bel-eval-mac-2
-   :assign-vars-1 bel-assign-vars-1
-   :assign-vars-optional-arg bel-assign-vars-optional-arg
-   :assign-vars-typecheck-1 bel-assign-vars-typecheck-1
-   :assign-vars-typecheck-2 bel-assign-vars-typecheck-2
-   :assign-vars-rest bel-assign-vars-rest
-   :eval-clo-2 bel-eval-clo-2
-   :dyn-2 bel-eval-dyn-2
-   :dyn-remove bel-eval-dyn-remove
-   :ccc-2 bel-eval-ccc-2
-   :backquote bel-eval-backquote
-   :eval-bq-comma-1 bel-eval-bq-comma-1
-   :eval-bq-splice-1 bel-eval-bq-splice-1
-   :eval-bq-pair-1 bel-eval-bq-pair-1
-   :eval-bq-rest-1 bel-eval-bq-rest-1
-   :eval-apply-2 bel-eval-apply-2})
+  {:pair eval-pair
+   :set-2 eval-set-2
+   :if-2 eval-if-2
+   :application-2 eval-application-2
+   :eval-many-1 eval-many-1
+   :eval-many-2 eval-many-2
+   :eval-lit-1 eval-lit-1
+   :eval-prim-simple eval-prim-simple
+   :eval-mac-2 eval-mac-2
+   :assign-vars-1 assign-vars-1
+   :assign-vars-optional-arg assign-vars-optional-arg
+   :assign-vars-typecheck-1 assign-vars-typecheck-1
+   :assign-vars-typecheck-2 assign-vars-typecheck-2
+   :assign-vars-rest assign-vars-rest
+   :eval-clo-2 eval-clo-2
+   :dyn-2 eval-dyn-2
+   :dyn-remove eval-dyn-remove
+   :ccc-2 eval-ccc-2
+   :backquote eval-backquote
+   :eval-bq-comma-1 eval-bq-comma-1
+   :eval-bq-splice-1 eval-bq-splice-1
+   :eval-bq-pair-1 eval-bq-pair-1
+   :eval-bq-rest-1 eval-bq-rest-1
+   :eval-apply-2 eval-apply-2})
 
-(defn bel-eval-step [es rs]
+(defn eval-step [es rs]
   (let [top (last es)
         rest-es (drop-lastv es)
         [env form] top]
@@ -721,7 +722,7 @@
   (let [lock (some-> es last first :dyn (get 'lock))]
     (and lock (not= lock m/bel-nil))))
 
-(defn bel-eval [threads]
+(defn eval [threads]
   (loop [threads threads]
     (let [[top-thread & rest-threads] threads
           [tid es rs] top-thread
@@ -738,17 +739,17 @@
                 [tid (drop-lastv es) rs]]
                rest-threads))
         :else
-        (let [[es' rs'] (bel-eval-step es rs)
+        (let [[es' rs'] (eval-step es rs)
               thread' [tid es' rs']]
           (recur
            (if (locking? es')
              (into [thread'] rest-threads)
              (into (vec rest-threads) [thread']))))))))
 
-(defn bel-eval-single [env form]
-  (bel-eval [[(gensym) [[env form]] []]]))
+(defn eval-single [env form]
+  (eval [[(gensym) [[env form]] []]]))
 
 (defn eval-all
   [env strs]
   (mapv (fn [s]
-          (bel-eval-single env (r/bel-parse s))) strs))
+          (eval-single env (r/parse s))) strs))
