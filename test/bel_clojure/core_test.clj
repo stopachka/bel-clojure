@@ -10,7 +10,7 @@
 (defn ev [& strs]
   (println ">" strs)
   (r/bel->pretty (last (e/eval-all @env strs))))
-(time (core-test))
+
 (deftest core-test
   (is (= (ev "(no nil)") 't))
   (is (= (ev "(atom \\a)") 't))
