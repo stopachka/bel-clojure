@@ -27,7 +27,6 @@
 ;; ------
 ;; where
 
-
 (defn in-where? [es]
   (= (second (peek es)) [:where]))
 
