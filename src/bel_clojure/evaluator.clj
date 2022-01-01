@@ -9,7 +9,7 @@
 
 (def drop-lastv (comp vec drop-last))
 
-(defn pkpop [x] (list (peek x) 
+(defn pkpop [x] (list (peek x)
                       (pop x)))
 
 (defn pkpop-many [n x] (list (take-last n x) (drop-lastv n x)))
