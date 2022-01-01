@@ -7,13 +7,29 @@
 ;; ----
 ;; Misc
 
-(def drop-lastv (comp vec drop-last))
+(defn stack-pop [x] (list (peek x) (pop x)))
+
+(defn stack-pop-2 [x]
+  (list (list (peek (pop x)) (peek x))
+        (pop (pop x))))
+
+(defn stack-pop-until-breakpoint [breakpoint x]
+  (loop [peeks ()
+         pops x]
+    (cond
+      (empty? pops) (list peeks pops)
+      (= (peek pops) breakpoint) (list peeks (pop pops))
+      :else
+      (recur
+       (conj peeks (peek pops))
+       (pop pops)))))
 
 ;; ------
 ;; where
 
+
 (defn in-where? [es]
-  (= (second (last es)) [:where]))
+  (= (second (peek es)) [:where]))
 
 (defn b-where [es rs env x]
   [(conj es
@@ -51,7 +67,7 @@
     :else
     (let [v-pair (get-variable env form)]
       (if (in-where? es)
-        [(drop-lastv es)
+        [(pop es)
          (conj rs
                (m/p v-pair (m/p m/bel-d m/bel-nil)))]
         [es
@@ -76,8 +92,7 @@
   [es rs])
 
 (defn eval-dyn-2 [es rs env [_ variable after]]
-  (let [ev (last rs)
-        rest-rs (drop-lastv rs)
+  (let [[ev rest-rs] (stack-pop rs)
         {:keys [dyn]} env]
     (m/map-put dyn variable (env-pair variable ev))
     [(conj es
@@ -101,8 +116,7 @@
     [es (conj rs (m/car args-head))]))
 
 (defn eval-ccc-2 [es rs env _form]
-  (let [f-evaled (last rs)
-        rest-rs (drop-lastv rs)]
+  (let [[f-evaled rest-rs] (stack-pop rs)]
     [(conj
       es
       [env
@@ -243,8 +257,7 @@
 ;; eval-if
 
 (defn eval-if-2 [es rs env [_ [consequent-form r]]]
-  (let [evaled-test-form (last rs)
-        rest-rs (drop-lastv rs)]
+  (let [[evaled-test-form rest-rs] (stack-pop rs)]
     [(conj es
            (cond
              (not= m/bel-nil evaled-test-form)
@@ -271,13 +284,12 @@
 
 (defn eval-set-2 [es rs {:keys [globe] :as _env} form]
   (let [[_ sym] form
-        evaled-v (last rs)
-        rest-rs (drop-lastv rs)]
+        [evaled-v rest-rs] (stack-pop rs)]
     (m/map-put
      globe
      sym
      (env-pair sym evaled-v))
-    [es (conj rest-rs)]))
+    [es rest-rs]))
 
 (defn eval-set-1 [es rs env form]
   (let [[sym after-sym] form
@@ -295,9 +307,9 @@
 ;; eval-application
 ;; --------------------
 
-(defn lit-type [[ _lit [ t]]] t)
+(defn lit-type [[_lit [t]]] t)
 
-(defn lit-v [[ _lit [ _t v]]] v)
+(defn lit-v [[_lit [_t v]]] v)
 
 (defn assert-lit [[lit :as form]]
   (assert (= m/bel-lit lit)
@@ -316,12 +328,11 @@
     niled-args))
 
 (defn eval-prim-simple [es rs env [_ n simple-f]]
-  (let [evaled-args (last rs)
-        rest-rs (drop-lastv rs)
+  (let [[evaled-args rest-rs] (stack-pop rs)
         args (m/p->seq evaled-args)]
     (try
       (if (in-where? es)
-        [(drop-lastv es)
+        [(pop es)
          (conj rs
                (m/p
                 (m/car evaled-args)
@@ -361,8 +372,7 @@
 ;; assign-vars
 
 (defn assign-vars-typecheck-2 [es rs env [_ variable arg]]
-  (let [check (last rs)
-        rest-rs (drop-lastv rs)]
+  (let [[check rest-rs] (stack-pop rs)]
     (if (= m/bel-nil check)
       [(conj es
              [env (m/p
@@ -378,8 +388,7 @@
        rest-rs])))
 
 (defn assign-vars-typecheck-1 [es rs env [_ variable arg]]
-  (let [evaled-f (last rs)
-        rest-rs (drop-lastv rs)]
+  (let [[evaled-f rest-rs] (stack-pop rs)]
     [(conj es
            [env [:assign-vars-typecheck-2 variable arg]]
            [env (m/p
@@ -389,15 +398,13 @@
      rest-rs]))
 
 (defn assign-vars-optional-arg [es rs env [_ variable]]
-  (let [arg-evaled (last rs)
-        rest-rs (drop-lastv rs)]
+  (let [[arg-evaled rest-rs] (stack-pop rs)]
     [(conj es
            [env [:assign-vars-1 variable arg-evaled]])
      rest-rs]))
 
 (defn assign-vars-rest [es rs env [_ var-head arg-head]]
-  (let [scope (last rs)
-        rest-rs (drop-lastv rs)]
+  (let [[scope rest-rs] (stack-pop rs)]
     [(conj es
            [(assoc env :scope scope)
             [:assign-vars-1 var-head arg-head]])
@@ -446,8 +453,7 @@
 ;; eval-clo
 
 (defn eval-clo-2 [es rs env [_ body-head]]
-  (let [scope (last rs)
-        rest-rs (drop-lastv rs)]
+  (let [[scope rest-rs] (stack-pop rs)]
     [(conj es
            [(assoc env :scope scope) body-head])
      rest-rs]))
@@ -459,31 +465,30 @@
       [:assign-vars-1 args-sym-head args-head]]]))
 
 (defn eval-clo [es rs env litv args-head]
-  [(into es (clo-expression-stack env litv args-head))
+  [(apply conj (concat [es] (clo-expression-stack env litv args-head)))
    rs])
 
 ;; ------------
 ;; eval-mac
 
 (defn eval-mac-2 [es rs env _form]
-  (let [code (last rs)
-        rest-rs (drop-lastv rs)]
+  (let [[code rest-rs] (stack-pop rs)]
     [(conj es [env code])
      rest-rs]))
 
 (defn eval-mac-1 [es rs env litv args-head]
-  (let [[ [ _ [ _ clo]]] litv]
-    [(into es
-           (concat [[env [:eval-mac-2]]]
-                   (clo-expression-stack env clo args-head)))
+  (let [[[_ [_ clo]]] litv]
+    [(apply conj
+            (concat [es
+                     [env [:eval-mac-2]]]
+                    (clo-expression-stack env clo args-head)))
      rs]))
 
 ;; ------------
 ;; eval-lit
 
 (defn eval-lit-1 [es rs env [_ evaled-lit]]
-  (let [args-head (last rs)
-        rest-rs (drop-lastv rs)
+  (let [[args-head rest-rs] (stack-pop rs)
         litv (lit-v evaled-lit)]
     (condp = (lit-type evaled-lit)
       m/bel-prim
@@ -498,25 +503,25 @@
 ;; --------------
 ;; eval-many
 
-(defn eval-many-2 [es rs _env [_ rs-cnt]]
-  (let [rest-rs (vec (take rs-cnt rs))
-        evaled-pairs (m/seq->p (reverse (drop rs-cnt rs)))]
+(defn eval-many-2 [es rs _env _form]
+  (let [[top-ps rest-rs] (stack-pop-until-breakpoint :eval-many-breakpoint rs)
+        evaled-pairs (m/seq->p (reverse top-ps))]
     [es (conj rest-rs evaled-pairs)]))
 
 (defn eval-many-1 [es rs env [_ args-head]]
   (let [pairs-to-eval (m/p->seq args-head)]
-    [(vec
+    [(apply
+      conj
       (concat
-       (conj es [env [:eval-many-2 (count rs)]])
+       [es [env [:eval-many-2]]]
        (map (fn [p] [env p]) pairs-to-eval)))
-     rs]))
+     (conj rs :eval-many-breakpoint)]))
 
 ;; --------------------
 ;; eval-application
 
 (defn eval-application-2 [es rs env [_ args-head]]
-  (let [evaled (last rs)
-        rest-rs (drop-lastv rs)]
+  (let [[evaled rest-rs] (stack-pop rs)]
     (if (m/number? evaled)
       [(conj es
              [env [:eval-lit-1 (m/cdr (get-variable env 'nth))]]
@@ -552,8 +557,7 @@
          m/seq->p)))
 
 (defn eval-apply-2 [es rs env [_ f]]
-  (let [evaled-apply-head (last rs)
-        rest-rs (drop-lastv rs)]
+  (let [[evaled-apply-head rest-rs] (stack-pop rs)]
     [(conj
       es
       [env (m/p
@@ -582,8 +586,7 @@
 ;; eval-backquote
 
 (defn eval-bq-comma-1 [es rs _env _form]
-  (let [[r-evaled h-evaled] (take-last 2 rs)
-        rest-rs (drop-lastv 2 rs)]
+  (let [[[r-evaled h-evaled] rest-rs] (stack-pop-2 rs)]
     [es
      (conj
       rest-rs
@@ -592,8 +595,7 @@
        r-evaled))]))
 
 (defn eval-bq-splice-1 [es rs _env _form]
-  (let [[r-evaled h-evaled] (take-last 2 rs)
-        rest-rs (drop-lastv 2 rs)]
+  (let [[[r-evaled h-evaled] rest-rs] (stack-pop-2 rs)]
     [es
      (conj
       rest-rs
@@ -602,8 +604,7 @@
        r-evaled))]))
 
 (defn eval-bq-pair-1 [es rs _env _form]
-  (let [[r-evaled h-evaled] (take-last 2 rs)
-        rest-rs (drop-lastv 2 rs)]
+  (let [[[r-evaled h-evaled] rest-rs] (stack-pop-2 rs)]
     [es
      (conj
       rest-rs
@@ -612,8 +613,7 @@
        r-evaled))]))
 
 (defn eval-bq-rest-1 [es rs _env [_ h]]
-  (let [r-evaled (last rs)
-        rest-rs (drop-lastv rs)]
+  (let [[r-evaled rest-rs] (stack-pop rs)]
     [es
      (conj
       rest-rs
@@ -696,8 +696,7 @@
    :eval-apply-2 eval-apply-2})
 
 (defn eval-step [es rs]
-  (let [top (last es)
-        rest-es (drop-lastv es)
+  (let [[top rest-es] (stack-pop es)
         [env form] top]
     (cond
       (literal? form)
@@ -726,27 +725,27 @@
   (and (seqable? form) (= :start-thread (first form))))
 
 (defn start-thread-command->thread [[_ env form]]
-  [(gensym) [[env form]] []])
+  [(gensym) (list [env form]) ()])
 
 (defn locking? [es]
-  (let [lock (some-> es last first :dyn (get 'lock))]
+  (let [lock (some-> es peek first :dyn (get 'lock))]
     (and lock (not= lock m/bel-nil))))
 
 (defn eval [threads]
   (loop [threads threads]
     (let [[top-thread & rest-threads] threads
           [tid es rs] top-thread
-          [_ top-form] (last es)]
+          [_ top-form] (peek es)]
       (cond
         (empty? es)
         (if (empty? rest-threads)
-          (or (last rs) m/bel-nil)
+          (or (peek rs) m/bel-nil)
           (recur rest-threads))
 
         (start-thread-command? top-form)
         (recur
          (into [(start-thread-command->thread top-form)
-                [tid (drop-lastv es) rs]]
+                [tid (pop es) rs]]
                rest-threads))
         :else
         (let [[es' rs'] (eval-step es rs)
@@ -757,7 +756,7 @@
              (into (vec rest-threads) [thread']))))))))
 
 (defn eval-single [env form]
-  (eval [[(gensym) [[env form]] []]]))
+  (eval [[(gensym) (list [env form]) ()]]))
 
 (defn eval-all
   [env strs]
