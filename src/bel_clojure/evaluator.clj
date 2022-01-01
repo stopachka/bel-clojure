@@ -505,7 +505,6 @@
 
 (defn eval-many-2 [es rs _env _form]
   (let [[top-ps rest-rs] (stack-pop-until-breakpoint :eval-many-breakpoint rs)
-        _ (println top-ps)
         evaled-pairs (m/seq->p (reverse top-ps))]
     [es (conj rest-rs evaled-pairs)]))
 
