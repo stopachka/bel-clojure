@@ -47,7 +47,7 @@
 (defn not-bel-nil [x]
   (when-not (= x m/bel-nil) x))
 
-(defn get-variable [{:keys [dyn scope globe]} form]
+(defn v-pair [{:keys [dyn scope globe]} form]
   (let [v (->> [dyn scope globe]
                (some (fn [x]
                        (not-bel-nil (m/map-get x form)))))]
@@ -64,13 +64,13 @@
     [es (conj rs (:scope env))]
 
     :else
-    (let [v-pair (get-variable env form)]
+    (let [vp (v-pair env form)]
       (if (in-where? es)
         [(pop es)
          (conj rs
-               (m/p v-pair (m/p m/bel-d m/bel-nil)))]
+               (m/p vp (m/p m/bel-d m/bel-nil)))]
         [es
-         (conj rs (m/cdr v-pair))]))))
+         (conj rs (m/cdr vp))]))))
 
 ;; ----------
 ;; thread
@@ -212,7 +212,7 @@
     "sym" #'m/sym
     "nom" #'m/nom
     "coin" #'m/coin
-    "p-debug" #'b-debug
+    "debug" #'b-debug
     "uvar" #'b-uvar
     "bin<" #'b-bin<
     "map-assoc" #'m/map-assoc}
@@ -523,7 +523,7 @@
   (let [[evaled rest-rs] (stack-pop rs)]
     (if (m/number? evaled)
       [(conj es
-             [env [:eval-lit-1 (m/cdr (get-variable env 'nth))]]
+             [env [:eval-lit-1 (m/cdr (v-pair env 'nth))]]
              [env [:eval-many-1 (m/p evaled args-head)]])
        rest-rs]
       (let [evaled-lit (assert-lit evaled)
