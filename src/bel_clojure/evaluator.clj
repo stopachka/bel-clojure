@@ -96,7 +96,7 @@
 ;; ccc
 
 (defn eval-cont [_es _rs _env litv args-head]
-  (let [[_ f] litv
+  (let [[f] litv
         [es rs] (f)]
     [es (conj rs (m/car args-head))]))
 
@@ -242,7 +242,7 @@
 ;; ------------
 ;; eval-if
 
-(defn eval-if-2 [es rs env [_ [_ consequent-form r]]]
+(defn eval-if-2 [es rs env [_ [consequent-form r]]]
   (let [evaled-test-form (last rs)
         rest-rs (drop-lastv rs)]
     [(conj es
@@ -260,7 +260,7 @@
               (m/p m/bel-if r)]))
      rest-rs]))
 
-(defn eval-if-1 [es rs env [_ test-form r]]
+(defn eval-if-1 [es rs env [test-form r]]
   [(conj es
          [env [:if-2 r]]
          [env test-form])
@@ -280,10 +280,10 @@
     [es (conj rest-rs)]))
 
 (defn eval-set-1 [es rs env form]
-  (let [[_ sym after-sym] form
+  (let [[sym after-sym] form
         _ (assert (not= m/bel-nil after-sym)
                   "Set sym needs a value")
-        [_ v after-v] after-sym
+        [v after-v] after-sym
         es' (if (not= after-v m/bel-nil)
               (conj es [env (m/p m/bel-set after-v)])
               es)]
@@ -295,11 +295,11 @@
 ;; eval-application
 ;; --------------------
 
-(defn lit-type [[_ _lit [_ t]]] t)
+(defn lit-type [[ _lit [ t]]] t)
 
-(defn lit-v [[_ _lit [_ _t v]]] v)
+(defn lit-v [[ _lit [ _t v]]] v)
 
-(defn assert-lit [[_ lit :as form]]
+(defn assert-lit [[lit :as form]]
   (assert (= m/bel-lit lit)
           (format
            "expected lit expression got form = %s" form))
@@ -454,7 +454,7 @@
      rest-rs]))
 
 (defn clo-expression-stack [env litv args-head]
-  (let [[_ scope [_ args-sym-head [_ body-head]]] litv]
+  (let [[scope [args-sym-head [body-head]]] litv]
     [[env [:eval-clo-2 body-head]]
      [(assoc env :scope scope)
       [:assign-vars-1 args-sym-head args-head]]]))
@@ -473,7 +473,7 @@
      rest-rs]))
 
 (defn eval-mac-1 [es rs env litv args-head]
-  (let [[_ [_ _ [_ _ clo]]] litv]
+  (let [[ [ _ [ _ clo]]] litv]
     [(into es
            (concat [[env [:eval-mac-2]]]
                    (clo-expression-stack env clo args-head)))
@@ -532,7 +532,7 @@
                  [env [:eval-many-1 args-head]])
            rest-rs])))))
 
-(defn eval-application-1 [es rs env [_ f args-head :as _form]]
+(defn eval-application-1 [es rs env [f args-head :as _form]]
   [(conj es
          [env [:application-2 args-head]]
          [env f])
@@ -561,7 +561,7 @@
             f (apply-head->args-head evaled-apply-head))])
      rest-rs]))
 
-(defn eval-apply-1 [es rs env [_ f apply-head :as _form]]
+(defn eval-apply-1 [es rs env [f apply-head :as _form]]
   [(conj
     es
     [env [:eval-apply-2 f]]
@@ -571,7 +571,7 @@
 ;; -------------
 ;; eval-pair
 
-(defn eval-pair [es rs env [_ l r :as form]]
+(defn eval-pair [es rs env [l r :as form]]
   (cond
     (= m/bel-quote l) [es (conj rs r)]
     (= m/bel-set l) (eval-set-1 es rs env r)
@@ -633,7 +633,7 @@
       [es (conj rs form)]
 
       :else
-      (let [[_ h r] form
+      (let [[h r] form
             h-t (m/type h)]
         (cond
           (= h-t 'comma)
@@ -672,8 +672,7 @@
       (m/string? form)))
 
 (def step->fn
-  {:pair eval-pair
-   :set-2 eval-set-2
+  {:set-2 eval-set-2
    :if-2 eval-if-2
    :application-2 eval-application-2
    :eval-many-1 eval-many-1
@@ -708,17 +707,21 @@
       (m/bel-variable? form)
       (eval-variable rest-es rs env form)
 
+      (m/pair? form)
+      (eval-pair rest-es rs env form)
+
       :else
       (let [f (step->fn (first form))]
         (f rest-es rs env form)))))
 
 (defn debug-loop [tid es rs]
+  (println "---start--")
   (println "tid:" tid)
   (println "in:")
-  (mapv (comp println r/bel->pretty second) es)
+  (doall (map (comp println r/bel->pretty second) es))
   (println "out:")
-  (mapv println rs)
-  (println "---"))
+  (doall (map println rs))
+  (println "---end---"))
 
 (defn start-thread-command? [form]
   (and (seqable? form) (= :start-thread (first form))))

@@ -17,7 +17,7 @@
       x)))
 
 ;; -------
-;; unwrap 
+;; unwrap
 
 (def unwrap-sexp (form-transform :sexp second))
 
@@ -26,7 +26,7 @@
 (def unwrap-name (form-transform :name second))
 
 ;; ----
-;; list 
+;; list
 
 (def list->pair
   (form-transform
@@ -35,7 +35,7 @@
      (m/seq->p children))))
 
 ;; -------
-;; string 
+;; string
 
 (def transform-string
   (form-transform
@@ -66,7 +66,7 @@
                        m/bel-nil))))))
 
 ;; ----------
-;; abbrev-sym 
+;; abbrev-sym
 
 (declare handle-abbrev-sym)
 
@@ -151,7 +151,7 @@
                           (edn/read-string (str "\\" x)))))
 
 ;; -----
-;; bel-parse 
+;; bel-parse
 
 (def parse-string (-> "bel.ebnf" io/resource insta/parser))
 
@@ -189,7 +189,7 @@
     'number form
     'string form
     'pair
-    (let [[_ a b] form]
+    (let [[a b] form]
       (concat [(bel->pretty a)]
               (cond
                 (= m/bel-nil b) nil

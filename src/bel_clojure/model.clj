@@ -1,7 +1,7 @@
 (ns bel-clojure.model
   (:refer-clojure :rename {type clj-type
                            symbol? clj-symbol?
-                           string? clj-string? 
+                           string? clj-string?
                            char? clj-char?
                            number? clj-number?})
   (:import
@@ -21,7 +21,8 @@
 (def char? clj-char?)
 (def symbol? clj-symbol?)
 (def number? clj-number?)
-(defn pair? [a] (and (seqable? a) (= :pair (first a))))
+(defn pair? [a] (= (clj-type a) java.util.ArrayList))
+
 
 (defn type [x]
   (cond
@@ -29,8 +30,10 @@
     (string? x) 'string
     (char? x) 'char
     (number? x) 'number
+    (pair? x) 'pair
     (= (clj-type x) java.util.HashMap) 'mut-map
     (= (clj-type x) clojure.lang.PersistentArrayMap) 'imm-map
+    (not (seqable? x)) (symbol (str (clj-type x)))
     :else (symbol (first x))))
 
 ;; ---------
@@ -38,7 +41,7 @@
 
 (defn p
   ([a b]
-   (ArrayList. [:pair a b])))
+   (ArrayList. [a b])))
 
 ;; ---------
 ;; Constants
@@ -98,7 +101,7 @@
     (throw (Exception. (format "expected pair, got = %s" form)))
 
     :else
-    (second form)))
+    (first form)))
 
 (defn cdr [form]
   (cond
@@ -124,11 +127,11 @@
          :else [r])))))
 
 (defn xar [form y]
-  (.set form 1 y)
+  (.set form 0 y)
   form)
 
 (defn xdr [form y]
-  (.set form 2 y)
+  (.set form 1 y)
   form)
 
 (def sym symbol)
@@ -154,22 +157,22 @@
 ;; ---------
 ;; Optional
 
-(defn bel-optional? [[_ h]]
+(defn bel-optional? [[h]]
   (= bel-o h))
 
-(defn bel-optional-var [[_ _h [_ variable]]] variable)
+(defn bel-optional-var [[_h [variable]]] variable)
 
-(defn bel-optional-arg [[_ _h [_ _variable r]]] (car r))
+(defn bel-optional-arg [[_h [_variable r]]] (car r))
 
 ;; ---------
 ;; Typecheck
 
-(defn bel-typecheck? [[_ h]]
+(defn bel-typecheck? [[h]]
   (= bel-t h))
 
-(defn bel-typecheck-var [[_ _h [_ variable]]] variable)
+(defn bel-typecheck-var [[_h [variable]]] variable)
 
-(defn bel-typecheck-f [[_ _h [_ _variable r]]] (car r))
+(defn bel-typecheck-f [[_h [_variable r]]] (car r))
 
 ;; -------
 ;; Interop
