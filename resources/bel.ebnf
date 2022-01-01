@@ -1,7 +1,7 @@
 sexp = string | list | abbrev_fn | quote | backquote | comma | splice | char | symbol | dot | number | comp_sym
 list = lparen sexp? (<whitespace> sexp)* rparen
 abbrev_fn = <'['> sexp? (<whitespace> sexp)* <']'>
-comp_sym = symbol? (comp_id* symbol)*
+comp_sym = symbol (comp_id* symbol)* | (comp_id* symbol) (comp_id* symbol)*
 comp_id = (':' | '!' | '.' | '~' | ':' | '|')
 <lparen> = <'('>
 <rparen> = <')'>
