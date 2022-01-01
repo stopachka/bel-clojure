@@ -21,20 +21,30 @@
 (def char? clj-char?)
 (def symbol? clj-symbol?)
 (def number? clj-number?)
-(defn pair? [a] (= (clj-type a) java.util.ArrayList))
+(def pair? (comp (partial = java.util.ArrayList) clj-type))
+(def mut-map? (comp (partial = java.util.HashMap) clj-type))
+(def imm-map? (comp (partial = clojure.lang.PersistentArrayMap) clj-type))
+(def clj-err? (partial instance? Throwable))
 
-
-(defn type [x]
+(defn type-nilable [x]
   (cond
     (symbol? x) 'symbol
     (string? x) 'string
     (char? x) 'char
     (number? x) 'number
     (pair? x) 'pair
-    (= (clj-type x) java.util.HashMap) 'mut-map
-    (= (clj-type x) clojure.lang.PersistentArrayMap) 'imm-map
-    (not (seqable? x)) (symbol (str (clj-type x)))
-    :else (symbol (first x))))
+    (mut-map? x) 'mut-map
+    (imm-map? x) 'imm-map
+    (clj-err? x) 'clj-err
+    :else
+    (let [v (and (seqable? x) (first x))]
+      (when (#{:splice :comma :backquote :err} v)
+        (symbol (name v))))))
+
+(defn type [x]
+  (let [v (type-nilable x)]
+    (assert v (format "Unsupported type for form = %s" x))
+    v))
 
 ;; ---------
 ;; Pair Cons
@@ -69,7 +79,7 @@
 ;; Pair Helpers
 
 (defn quoted-p [a]
-  (p bel-quote a))
+  (p bel-quote (p a bel-nil)))
 
 (defn seq->p
   [xs]

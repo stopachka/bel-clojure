@@ -87,8 +87,8 @@
   (m/p (if (seq left-xs)
          (handle-abbrev-sym left-xs)
          'upon)
-       (m/p (m/p m/bel-quote
-                 (handle-abbrev-sym right-xs)) m/bel-nil)))
+       (m/p (m/quoted-p (handle-abbrev-sym right-xs))
+            m/bel-nil)))
 
 (defn handle-no [left-xs [r & right-xs]]
   (handle-abbrev-sym
@@ -179,7 +179,7 @@
 ;; bel->pretty
 
 (defn bel->pretty [form]
-  (condp = (m/type form)
+  (condp = (m/type-nilable form)
     'symbol (if (= m/bel-nil form) nil form)
     'backquote (list 'bq (bel->pretty (second form)))
     'comma (list 'cm (bel->pretty (second form)))

@@ -339,8 +339,7 @@
       (catch Throwable e
         [(conj es [env (m/p
                         m/bel-err-sym
-                        (m/p [:clj-err e]
-                             m/bel-nil))])
+                        (m/p e m/bel-nil))])
          rest-rs]))))
 
 (defn eval-prim [es rs env litv args-head]
@@ -368,7 +367,7 @@
       [(conj es
              [env (m/p
                    m/bel-err-sym
-                   (m/p (m/p m/bel-quote 'mistype)
+                   (m/p (m/quoted-p 'mistype)
                         m/bel-nil))])
        rs]
       [(conj es
@@ -385,7 +384,7 @@
            [env [:assign-vars-typecheck-2 variable arg]]
            [env (m/p
                  evaled-f
-                 (m/p (m/p m/bel-quote arg)
+                 (m/p (m/quoted-p arg)
                       m/bel-nil))])
      rest-rs]))
 
@@ -573,7 +572,7 @@
 
 (defn eval-pair [es rs env [l r :as form]]
   (cond
-    (= m/bel-quote l) [es (conj rs r)]
+    (= m/bel-quote l) [es (conj rs (m/car r))]
     (= m/bel-set l) (eval-set-1 es rs env r)
     (= m/bel-if l) (eval-if-1 es rs env r)
     (= m/bel-apply l) (eval-apply-1 es rs env r)
@@ -666,7 +665,7 @@
 ;; eval
 
 (defn literal? [form]
-  (or (#{'clj-err 'char 'number} (m/type form))
+  (or (#{'clj-err 'char 'number} (m/type-nilable form))
       (#{m/bel-nil m/bel-t m/bel-o m/bel-apply} form)
       (and (m/pair? form) (#{m/bel-lit} (m/car form)))
       (m/string? form)))
