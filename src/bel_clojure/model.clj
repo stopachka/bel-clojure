@@ -56,7 +56,7 @@
 ;; ---------
 ;; Constants
 
-(def bel-quote 'qt)
+(def bel-quote 'quote)
 (def bel-nil (symbol "nil"))
 (def bel-t 't)
 (def bel-err-sym 'err)
