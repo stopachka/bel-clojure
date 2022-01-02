@@ -134,7 +134,7 @@
 ;; err
 
 (defn b-err [_es _rs _env e]
-  [[] [(m/p m/bel-lit (m/p 'error (m/p e m/bel-nil) ))]])
+  [[] [(m/p m/bel-lit (m/p 'error (m/p e m/bel-nil)))]])
 
 ;; -----
 ;; debug
@@ -567,17 +567,6 @@
     [env [:eval-many-1 apply-head]])
    rs])
 
-;; -------------
-;; eval-pair
-
-(defn eval-pair [es rs env [l r :as form]]
-  (cond
-    (= m/bel-quote l) [es (conj rs (m/car r))]
-    (= m/bel-set l) (eval-set-1 es rs env r)
-    (= m/bel-if l) (eval-if-1 es rs env r)
-    (= m/bel-apply l) (eval-apply-1 es rs env r)
-    :else (eval-application-1 es rs env form)))
-
 ;; ------------------
 ;; eval-backquote
 
@@ -657,6 +646,54 @@
                  [env [:backquote r]])
            rs])))))
 
+(defn eval-backquote2 [es rs env [form]]
+  (if (not (m/pair? form))
+    [es (conj rs form)]
+    (let [[h r] form]
+      (cond
+        (= m/bel-comma h)
+        [(conj es [env (m/car r)])
+         rs]
+
+        (not (m/pair? h))
+        (conj es
+              [env [:eval-bq-rest-1 h]]
+              [env (m/p m/bel-backquote (m/p r m/bel-nil))])
+
+        (= m/bel-comma (m/car h))
+        [(conj
+          es
+          [env [:eval-bq-comma-1]]
+          [env (m/car (m/cdr h))]
+          [env (m/p m/bel-backquote (m/p r m/bel-nil))])
+         rs]
+        (= m/bel-splice (m/car h))
+        [(conj
+          es
+          [env [:eval-bq-splice-1]]
+          [env (m/car (m/cdr h))]
+          [env (m/p m/bel-backquote (m/p r m/bel-nil))])
+         rs]
+        :else
+        [(conj es
+               [env [:eval-bq-pair-1]]
+               [env (m/p m/bel-backquote (m/p h m/bel-nil))]
+               [env (m/p m/bel-backquote (m/p r m/bel-nil))])
+         rs]))))
+
+;; -------------
+;; eval-pair
+
+
+(defn eval-pair [es rs env [l r :as form]]
+  (cond
+    (= m/bel-quote l) [es (conj rs (m/car r))]
+    (= m/bel-backquote l) (eval-backquote2 es rs env r)
+    (= m/bel-set l) (eval-set-1 es rs env r)
+    (= m/bel-if l) (eval-if-1 es rs env r)
+    (= m/bel-apply l) (eval-apply-1 es rs env r)
+    :else (eval-application-1 es rs env form)))
+
 ;; --------
 ;; eval
 
@@ -731,6 +768,7 @@
     (let [[top-thread & rest-threads] threads
           [tid es rs] top-thread
           [_ top-form] (peek es)]
+      (debug-loop tid es rs)
       (cond
         (empty? es)
         (if (empty? rest-threads)

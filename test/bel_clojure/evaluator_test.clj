@@ -12,7 +12,7 @@
   (last (ev-all (env) strs)))
 
 (deftest test-evaluator
-  (is (= (ev "nil") nil))
+  (is ((ev "nil") = nil))
   (is (= (ev "\\b") \b))
   (is (= (ev "\"foo\"") "foo"))
   (is (= (ev "'foo") 'foo))
@@ -47,6 +47,10 @@
           "(def no (x) (id x nil))"
           "(no nil)")
          't))
+  (is (= (ev "(set a 'foo b '(bar baz))" "`,a")
+         'foo))
+  (is (= (ev "(set a 'foo b '(bar baz))" "`',a")
+         ''foo))
   (is (= (ev "(set a 'foo b '(bar baz))" "`(foo ',a ,@b)")
          '(foo (quote foo) bar baz)))
   (is (= (ev "(set x 'a)" "`(x ,x y)")

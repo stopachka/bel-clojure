@@ -150,6 +150,18 @@
   (form-transform :char (fn [[_ x]]
                           (edn/read-string (str "\\" x)))))
 
+;; -------
+;; quasiquote
+
+(def transform-backquote
+  (form-transform :backquote (fn [[_ v]]
+                               (m/p m/bel-backquote (m/p v m/bel-nil)))))
+(def transform-comma
+  (form-transform :comma (fn [[_ v]]
+                               (m/p m/bel-comma (m/p v m/bel-nil)))))
+(def transform-splice
+  (form-transform :splice (fn [[_ v]]
+                               (m/p m/bel-splice (m/p v m/bel-nil)))))
 ;; -----
 ;; bel-parse
 
@@ -170,7 +182,10 @@
    abbrev-fn->pair
    abbrev-sym->pair
    transform-number
-   transform-char))
+   transform-char
+   transform-backquote
+   transform-comma
+   transform-splice))
 
 (def parse
   (comp (partial walk/postwalk parse-postwalk) parse-string cstring/trim))
