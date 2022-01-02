@@ -86,17 +86,14 @@
 ;; ----
 ;; dyn
 
-(defn eval-dyn-remove [es rs {:keys [dyn]} [_ variable]]
-  (m/map-delete dyn variable)
-  [es rs])
-
 (defn eval-dyn-2 [es rs env [_ variable after]]
   (let [[ev rest-rs] (stack-pop rs)
         {:keys [dyn]} env]
-    (m/map-put dyn variable (env-pair variable ev))
     [(conj es
-           [env [:dyn-remove variable]]
-           [env after])
+           [(assoc env
+                   :dyn
+                   (m/map-assoc dyn variable (env-pair variable ev)))
+            after])
      rest-rs]))
 
 (defn b-dyn [es rs env variable arg after]
@@ -250,7 +247,7 @@
   ([g]
    {:globe g
     :scope m/bel-nil
-    :dyn (m/mut-map)}))
+    :dyn m/bel-nil}))
 
 ;; ------------
 ;; eval-if
@@ -685,7 +682,6 @@
    :assign-vars-rest assign-vars-rest
    :eval-clo-2 eval-clo-2
    :dyn-2 eval-dyn-2
-   :dyn-remove eval-dyn-remove
    :ccc-2 eval-ccc-2
    :backquote eval-backquote
    :eval-bq-comma-1 eval-bq-comma-1
