@@ -137,7 +137,7 @@
 ;; err
 
 (defn b-err [_es _rs _env e]
-  [[] [[:err e]]])
+  [[] [(m/p m/bel-lit (m/p 'error (m/p e m/bel-nil) ))]])
 
 ;; -----
 ;; debug

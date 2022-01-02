@@ -87,19 +87,19 @@
   (is (= (ev "((isa 'clo) map)") 't))
   (is (= (ev "(def consa (xs|pair) (cons 'a xs))"
              "(consa 'z)")
-         '(err (qt mistype))))
+         '(lit error (qt mistype))))
   (is (= (ev "(def consa (xs|pair) (cons 'a xs))"
              "(consa '(a b))")
          '(a a b)))
   (is (= (ev "(def foo ((o (t (x . y) [caris _ 'a]) '(a . b))) x)"
              "(foo '(b b))")
-         '(err (qt mistype))))
+         '(lit error (qt mistype))))
   (is (= (ev "(def foo ((o (t (x . y) [caris _ 'a]) '(a . b))) x)"
              "(foo)")
          'a))
   (is (= (ev "((fn (x (o y x)) y) 'a)") 'a))
   (is (= (ev "((fn (f x|f) x) pair 'a)")
-         '(err (qt mistype))))
+         '(lit error (qt mistype))))
   (is (= (ev "(map function (list car append 'foo))") '(prim clo nil)))
   (is (= (ev "(map (con 'yo) '(a b c))") '(yo yo yo)))
   (is (= (ev "(car:cdr '(a b c))") 'b))

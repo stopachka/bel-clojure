@@ -67,8 +67,8 @@
                                "(cont 'c)"]))
          '((a . b) (a . c))))
   (is (= (ev "(err \"something\")")
-         '(err "something")))
-  (is (= (first (ev "(car 'a)")) 'err))
+         '(lit error "something")))
+  (is (= (take 2 (ev "(car 'a)")) '(lit error)))
   (is (= (ev
           "(dyn err (lit clo nil (x) 'hello) (car 'a))")
          'hello))
@@ -76,7 +76,7 @@
          'hello))
   (is (= (ev
           "((lit clo nil ((t x (lit clo nil (x) (id t x)))) 'hello) nil)")
-         '(err (qt mistype))))
+         '(lit error (qt mistype))))
   (is (= (ev "1") 1))
   (is (= (ev "(+ 1 2.0)") 3.0))
   (is (= (ev "(num< 2 3)") 't))

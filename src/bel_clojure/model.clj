@@ -38,7 +38,7 @@
     (clj-err? x) 'clj-err
     :else
     (let [v (and (seqable? x) (first x))]
-      (when (#{:splice :comma :backquote :err} v)
+      (when (#{:splice :comma :backquote} v)
         (symbol (name v))))))
 
 (defn type [x]
