@@ -768,7 +768,6 @@
     (let [[top-thread & rest-threads] threads
           [tid es rs] top-thread
           [_ top-form] (peek es)]
-      (debug-loop tid es rs)
       (cond
         (empty? es)
         (if (empty? rest-threads)
