@@ -1,11 +1,12 @@
-;; shadow-cljs configuration
 {:source-paths
  ["src/dev"
   "src/main"
   "src/test"]
 
  :dependencies
- []
+ [[instaparse "1.4.12"]]
+
+ :dev-http {8080 "public"}
 
  :builds
  {:frontend
