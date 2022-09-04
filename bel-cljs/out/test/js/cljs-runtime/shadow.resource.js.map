@@ -1,0 +1,1 @@
+{"version":3,"sources":["shadow/resource.cljs"],"mappings":"","names":[],"sourcesContent":["(ns shadow.resource\n  (:require-macros [shadow.resource]))\n"]}

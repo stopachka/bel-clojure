@@ -1,0 +1,673 @@
+; Bel in Bel. 9 October 2019, 9:14 GMT
+
+; stopa-edit
+; Writing a poor man's def, to let PG's code run,
+; before he defines it
+
+(set
+ def
+ (lit
+  mac
+  (lit
+   clo nil (n p e)
+   (join 'set
+         (join
+          n
+          (join
+           (join
+            'lit (join 'clo (join nil (join p (join e nil)))))
+           nil))))))
+
+; /stopa-edit
+
+(def no (x)
+  (id x nil))
+
+; stopa-edit
+; string is a separate type in this implementation
+
+(def atom (x)
+  (if (no (id (type x) 'pair))
+      (if (no (id (type x) 'string)) t)))
+
+; /stopa-edit
+
+(def all (f xs)
+  (if (no xs)      t
+      (f (car xs)) (all f (cdr xs))
+                   nil))
+
+(def some (f xs)
+  (if (no xs)      nil
+      (f (car xs)) xs
+                   (some f (cdr xs))))
+
+(def reduce (f xs)
+  (if (no (cdr xs))
+      (car xs)
+      (f (car xs) (reduce f (cdr xs)))))
+
+(def cons args
+  (reduce join args))
+
+(def append args
+  (if (no (cdr args)) (car args)
+      (no (car args)) (apply append (cdr args))
+                      (cons (car (car args))
+                            (apply append (cdr (car args))
+                                          (cdr args)))))
+
+
+
+(def snoc args
+  (append (car args) (cdr args)))
+
+(def list args
+  (append args nil))
+
+(def map (f . ls)
+  (if (no ls)       nil
+      (some no ls)  nil
+      (no (cdr ls)) (cons (f (car (car ls)))
+                          (map f (cdr (car ls))))
+                    (cons (apply f (map car ls))
+                          (apply map f (map cdr ls)))))
+
+; stopa-edit
+; poor man's mac, to support mac until PG defines it
+
+(set
+ mac
+ (lit
+  mac
+  (lit
+   clo nil (n p e)
+   (join 'set
+         (join
+          n
+          (join
+           (join
+            'lit
+            (join
+             'mac
+             (join
+              (join
+               'lit (join 'clo (join nil (join p (join e nil)))))
+              nil)))
+           nil))))))
+
+; /stopa-edit
+
+(mac fn (parms . body)
+  (if (no (cdr body))
+      `(list 'lit 'clo scope ',parms ',(car body))
+      `(list 'lit 'clo scope ',parms '(do ,@body))))
+
+(mac do args
+  (reduce (fn (x y)
+            (list (list 'fn (uvar) y) x))
+          args))
+
+(mac let (parms val . body)
+  `((fn (,parms) ,@body) ,val))
+
+(mac macro args
+  `(list 'lit 'mac (fn ,@args)))
+
+(mac def (n . rest)
+  `(set ,n (fn ,@rest)))
+
+(mac mac (n . rest)
+  `(set ,n (macro ,@rest)))
+
+(mac or args
+  (if (no args)
+      nil
+      (let v (uvar)
+        `(let ,v ,(car args)
+           (if ,v ,v (or ,@(cdr args)))))))
+
+(mac and args
+  (reduce (fn es (cons 'if es))
+          (or args '(t))))
+
+(def = args
+  (if (no (cdr args))  t
+      (some atom args) (all [id _ (car args)] (cdr args))
+                       (and (apply = (map car args))
+                            (apply = (map cdr args)))))
+
+; stopa-edit
+; Added number + string as primitive types. Letting
+; these seep in from Clojure
+
+(def symbol (x) (= (type x) 'symbol))
+
+(def pair   (x) (= (type x) 'pair))
+
+(def char   (x) (= (type x) 'char))
+
+(def number (x) (= (type x) 'number))
+
+(def string (x) (= (type x) 'string))
+
+; /stopa-edit
+
+(def proper (x)
+  (or (no x)
+      (and (pair x) (proper (cdr x)))))
+
+(def mem (x ys (o f =))
+  (some [f _ x] ys))
+
+(def in (x . ys)
+  (mem x ys))
+
+(def cadr  (x) (car (cdr x)))
+
+(def cddr  (x) (cdr (cdr x)))
+
+(def caddr (x) (car (cddr x)))
+
+(mac case (expr . args)
+  (if (no (cdr args))
+      (car args)
+      (let v (uvar)
+        `(let ,v ,expr
+           (if (= ,v ',(car args))
+               ,(cadr args)
+               (case ,v ,@(cddr args)))))))
+
+(mac iflet (var . args)
+  (if (no (cdr args))
+      (car args)
+      (let v (uvar)
+        `(let ,v ,(car args)
+           (if ,v
+               (let ,var ,v ,(cadr args))
+               (iflet ,var ,@(cddr args)))))))
+
+(mac aif args
+  `(iflet it ,@args))
+
+(def find (f xs)
+  (aif (some f xs) (car it)))
+
+(def begins (xs pat (o f =))
+  (if (no pat)               t
+      (atom xs)              nil
+      (f (car xs) (car pat)) (begins (cdr xs) (cdr pat) f)
+                             nil))
+
+(def caris (x y (o f =))
+  (begins x (list y) f))
+
+(def hug (xs (o f list))
+  (if (no xs)       nil
+      (no (cdr xs)) (list (f (car xs)))
+                    (cons (f (car xs) (cadr xs))
+                          (hug (cddr xs) f))))
+
+(mac with (parms . body)
+  (let ps (hug parms)
+    `((fn ,(map car ps) ,@body)
+      ,@(map cadr ps))))
+
+(def keep (f xs)
+  (if (no xs)      nil
+      (f (car xs)) (cons (car xs) (keep f (cdr xs)))
+                   (keep f (cdr xs))))
+
+(def rem (x ys (o f =))
+  (keep [no (f _ x)] ys))
+
+(def get (k kvs (o f =))
+  (find [f (car _) k] kvs))
+
+(def put (k v kvs (o f =))
+  (cons (cons k v)
+        (rem k kvs (fn (x y) (f (car x) y)))))
+
+(def rev (xs)
+  (if (no xs)
+      nil
+      (snoc (rev (cdr xs)) (car xs))))
+
+(def snap (xs ys (o acc))
+  (if (no xs)
+      (list acc ys)
+      (snap (cdr xs) (cdr ys) (snoc acc (car ys)))))
+
+(def udrop (xs ys)
+  (cadr (snap xs ys)))
+
+(def idfn (x)
+  x)
+
+(def is (x)
+  [= _ x])
+
+(mac eif (var (o expr) (o fail) (o ok))
+  (with (v (uvar)
+         w (uvar)
+         c (uvar))
+    `(let ,v (join)
+       (let ,w (ccc (fn (,c)
+                      (dyn err [,c (cons ,v _)] ,expr)))
+         (if (caris ,w ,v id)
+             (let ,var (cdr ,w) ,fail)
+             (let ,var ,w ,ok))))))
+
+
+(mac onerr (e1 e2)
+  (let v (uvar)
+    `(eif ,v ,e2 ,e1 ,v)))
+
+(mac safe (expr)
+  `(onerr nil ,expr))
+
+(def literal (e)
+  (or (in e t nil o apply)
+      (in (type e) 'char 'stream)
+      (caris e 'lit)
+      (string e)))
+
+(def variable (e)
+  (and (atom e) (no (literal e))))
+
+(def isa (name)
+  [begins _ `(lit ,name) id])
+
+(def function (x)
+  (find [(isa _) x] '(prim clo)))
+
+(def con (x)
+  (fn args x))
+
+(def compose fs
+  (reduce (fn (f g)
+            (fn args (f (apply g args))))
+          (or fs (list idfn))))
+
+(def combine (op)
+  (fn fs
+    (reduce (fn (f g)
+              (fn args
+                (op (apply f args) (apply g args))))
+            (or fs (list (con (op)))))))
+
+(set cand (combine and)
+     cor  (combine or))
+
+(def foldl (f base . args)
+  (if (or (no args) (some no args))
+      base
+      (apply foldl f
+                   (apply f (snoc (map car args) base))
+                   (map cdr args))))
+
+(def foldr (f base . args)
+  (if (or (no args) (some no args))
+      base
+      (apply f (snoc (map car args)
+                     (apply foldr f base (map cdr args))))))
+
+(def of (f g)
+  (fn args (apply f (map g args))))
+
+(def upon args
+  [apply _ args])
+
+(def pairwise (f xs)
+  (or (no (cdr xs))
+      (and (f (car xs) (cadr xs))
+           (pairwise f (cdr xs)))))
+
+(def fuse (f . args)
+  (apply append (apply map f args)))
+
+(mac letu (v . body)
+  (if ((cor variable atom) v)
+      `(let ,v (uvar) ,@body)
+      `(with ,(fuse [list _ '(uvar)] v)
+         ,@body)))
+
+(mac pcase (expr . args)
+  (if (no (cdr args))
+      (car args)
+      (letu v
+        `(let ,v ,expr
+           (if (,(car args) ,v)
+               ,(cadr args)
+               (pcase ,v ,@(cddr args)))))))
+
+(def match (x pat)
+  (if (= pat t)                t
+      (function pat)           (pat x)
+      (or (atom x) (atom pat)) (= x pat)
+                               (and (match (car x) (car pat))
+                                    (match (cdr x) (cdr pat)))))
+
+(def split (f xs (o acc))
+  (if ((cor atom f:car) xs)
+      (list acc xs)
+      (split f (cdr xs) (snoc acc (car xs)))))
+
+(mac when (expr . body)
+  `(if ,expr (do ,@body)))
+
+(mac unless (expr . body)
+  `(when (no ,expr) ,@body))
+
+(def inc (n) (+ n 1))
+
+(def dec (n) (- n 1))
+
+(def pos (x ys (o f =))
+  (if (no ys)        nil
+      (f (car ys) x) 1
+                     (aif (pos x (cdr ys) f) (+ it 1))))
+
+(def len (xs)
+  (if (no xs) 0 (inc:len:cdr xs)))
+
+; stopa-edit
+
+(def charn (c)
+  (hash c))
+
+; stopa-edit
+
+(def < args
+  (pairwise bin< args))
+
+(def > args
+  (apply < (rev args)))
+
+(def list< (x y)
+  (if (no x) y
+      (no y) nil
+             (or (< (car x) (car y))
+                 (and (= (car x) (car y))
+                      (< (cdr x) (cdr y))))))
+
+(def pint (n)
+  (and (int n) (> n 0)))
+
+(def yc (f)
+  ([_ _] [f (fn a (apply (_ _) a))]))
+
+(mac rfn (name . rest)
+  `(yc (fn (,name) (fn ,@rest))))
+
+(mac afn args
+  `(rfn self ,@args))
+
+(def wait (f)
+  ((afn (v) (if v v (self (f))))
+   (f)))
+
+(def runs (f xs (o fon (and xs (f (car xs)))))
+  (if (no xs)
+      nil
+      (let (as bs) (split (if fon ~f f) xs)
+        (cons as (runs f bs (no fon))))))
+
+(def whitec (c)
+  (in c \space \n \tab \r))
+
+(def tokens (xs (o break whitec))
+  (let f (if (function break) break (is break))
+    (keep ~f:car (runs f xs))))
+
+(def dups (xs (o f =))
+  (if (no xs)                   nil
+      (mem (car xs) (cdr xs) f) (cons (car xs)
+                                      (dups (rem (car xs) (cdr xs) f) f))
+                                (dups (cdr xs) f)))
+
+(set simple (cor atom number))
+
+(mac do1 args
+  (letu v
+    `(let ,v ,(car args)
+       ,@(cdr args)
+       ,v)))
+
+(def gets (v kvs (o f =))
+  (find [f (cdr _) v] kvs))
+
+(def consif (x y)
+  (if x (cons x y) y))
+
+(mac check (x f (o alt))
+  (letu v
+    `(let ,v ,x
+       (if (,f ,v) ,v ,alt))))
+
+(mac withs (parms . body)
+  (if (no parms)
+      `(do ,@body)
+      `(let ,(car parms) ,(cadr parms)
+         (withs ,(cddr parms) ,@body))))
+
+(mac bind (var expr . body)
+  `(dyn ,var ,expr (do ,@body)))
+
+(mac atomic body
+  `(bind lock t ,@body))
+
+(def tail (f xs)
+  (if (no xs) nil
+      (f xs)  xs
+              (tail f (cdr xs))))
+
+(set dock rev:cdr:rev)
+
+(def lastcdr (xs)
+  (if (no (cdr xs))
+      xs
+      (lastcdr (cdr xs))))
+
+(set last car:lastcdr)
+
+(def newq ()
+  (list nil))
+
+(def enq (x q)
+  (atomic (xar q (snoc (car q) x)))
+  q)
+
+(def deq (q)
+  (atomic (do1 (car (car q))
+               (xar q (cdr (car q))))))
+
+(mac zap (op place . args)
+  (letu (vo vc vl va)
+    `(atomic (with (,vo       ,op
+                    (,vc ,vl) (where ,place)
+                    ,va       (list ,@args))
+               (case ,vl
+                 a (xar ,vc (apply ,vo (car ,vc) ,va))
+                 d (xdr ,vc (apply ,vo (cdr ,vc) ,va))
+                   (err 'bad-place))))))
+
+(mac ++ (place (o n 1))
+  `(zap + ,place ,n))
+
+(mac -- (place (o n 1))
+  `(zap - ,place ,n))
+
+(mac push (x place)
+  (letu v
+    `(let ,v ,x
+       (zap [cons ,v _] ,place))))
+
+(mac pull (x place . rest)
+  (letu v
+    `(let ,v ,x
+       (zap [rem ,v _ ,@rest] ,place))))
+
+(def drop (n xs)
+  (if (= n 0)
+      xs
+      (drop (- n 1) (cdr xs))))
+
+(def nth (n|pint xs|pair)
+  (if (= n 1)
+      (car xs)
+      (nth (- n 1) (cdr xs))))
+
+
+(def first (n xs)
+  (if (or (= n 0) (no xs))
+      nil
+      (cons (car xs)
+            (first (- n 1) (cdr xs)))))
+
+(mac catch body
+  (letu v
+    `(ccc (fn (,v) (bind throw ,v ,@body)))))
+
+(def cut (xs (o start 1) (o end (len xs)))
+  (first (- (+ end 1 (if (< end 0) (len xs) 0))
+            start)
+         (drop (- start 1) xs)))
+
+(mac whenlet (var expr . body)
+  `(iflet ,var ,expr (do ,@body)))
+
+(mac awhen args
+  `(whenlet it ,@args))
+
+(mac each (var expr . body)
+  `(map (fn (,var) ,@body) ,expr))
+
+(def flip (f)
+  (fn args (apply f (rev args))))
+
+(def part (f . args)
+  (fn rest
+    (apply f (append args rest))))
+
+(def trap (f . args)
+  (flip (apply part (flip f) (rev args))))
+
+(def only (f)
+  (fn args
+    (if (car args) (apply f args))))
+
+(def >= args
+  (pairwise ~bin< args))
+
+(def <= args
+  (apply >= (rev args)))
+
+(mac whilet (var expr . body)
+  (letu (vf vp)
+    `((rfn ,vf (,vp)
+        (whenlet ,var ,vp ,@body (,vf ,expr)))
+      ,expr)))
+
+(mac loop (var init update test . body)
+  (letu v
+    `((rfn ,v (,var)
+        (when ,test ,@body (,v ,update)))
+      ,init)))
+
+(mac while (expr . body)
+  (letu v
+    `(loop ,v ,expr ,expr ,v ,@body)))
+
+(mac til (var expr test . body)
+  `(loop ,var ,expr ,expr (no ,test)
+     ,@body))
+
+(mac for (var init max . body)
+  (letu (vi vm)
+    `(with (,vi ,init
+            ,vm ,max)
+       (loop ,var ,vi (+ ,var 1) (<= ,var ,vm)
+         ,@body))))
+
+(mac repeat (n . body)
+  `(for ,(uvar) 1 ,n ,@body))
+
+(mac poll (expr f)
+  (letu (vr ve vf)
+    `((rfn ,vr (,ve ,vf)
+        (if (,vf ,ve) ,ve (,vr ,expr ,vf)))
+      ,expr
+      ,f)))
+
+(mac accum (var . body)
+  (letu v
+    `(withs (,v   nil
+             ,var [push _ ,v])
+       ,@body
+       (rev ,v))))
+
+(mac nof (n expr)
+  (letu v
+    `(accum ,v (repeat ,n (,v ,expr)))))
+
+(mac drain (expr (o f 'no))
+  (letu v
+    `(accum ,v
+       (poll ,expr (cor ,f (compose no ,v))))))
+
+(mac wipe args
+  `(set ,@(fuse [list _ nil] args)))
+
+(mac pop (place)
+  `(let (cell loc) (where ,place)
+     (let xs ((case loc a car d cdr) cell)
+       ((case loc a xar d xdr) cell (cdr xs))
+       (car xs))))
+
+(mac clean (f place)
+  (letu v
+    `(let ,v (compose no ,f)
+       (zap [keep ,v _] ,place))))
+
+(mac swap places
+  (let vs (map [nof 3 (uvar)] places)
+    `(atomic (withs ,(fuse (fn (place (cell loc val))
+                             (list (list cell loc)
+                                   `(where ,place)
+                                   val
+                                   `((case ,loc a car d cdr) ,cell)))
+                           places
+                           vs)
+               ,@(map (fn ((cellx locx valx) (celly locy valy))
+                        `((case ,locx a xar d xdr) ,cellx ,valy))
+                      vs
+                      (snoc (cdr vs) (car vs)))))))
+
+(def adjoin (x ys (o f =))
+  (if (mem x ys f) ys (cons x ys)))
+
+(mac pushnew (x place (o f '=))
+  (letu v
+    `(let ,v ,x
+       (zap [adjoin ,v _ ,f] ,place))))
+
+(def dedup (xs (o f =))
+  (rev (foldl (trap adjoin f) nil xs)))
+
+(def insert (f x ys)
+  (if (no ys)        (list x)
+      (f x (car ys)) (cons x ys)
+                     (cons (car ys) (insert f x (cdr ys)))))
+
+(def sort (f xs)
+  (foldr (part insert f) nil (rev xs)))
+
+(set best car:sort)
+
+(def max args
+  (best > args))
+
+(def min args
+  (best < args))
+

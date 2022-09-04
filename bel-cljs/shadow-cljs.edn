@@ -8,7 +8,8 @@
  [[cider/cider-nrepl "0.24.0"]
   [instaparse "1.4.12"]]
 
- :dev-http {8080 "public"}
+ :dev-http {8080 "public"
+            7070 "out/test"}
 
  :builds
  {:frontend

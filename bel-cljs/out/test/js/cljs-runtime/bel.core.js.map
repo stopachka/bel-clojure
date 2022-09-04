@@ -1,0 +1,1 @@
+{"version":3,"sources":["bel/core.cljs"],"mappings":";AAIA,iBAAA,jBAAMA;AAAN,AACE,gHAAA,zGAACC,iHAAgBC,YAAIC","names":["bel.core/-main","cljs.core.println","bel.model/p","bel.reader/bel-ebnf"],"sourcesContent":["(ns bel.core\n  (:require [bel.model :as m]\n            [bel.reader :as r]))\n\n(defn -main []\n  (println \"hello\" m/p r/bel-ebnf))\n\n"]}

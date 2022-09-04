@@ -135,11 +135,11 @@
          :else [r])))))
 
 (defn xar [form y]
-  (.set form 0 y)
+  (aset form 0 y)
   form)
 
 (defn xdr [form y]
-  (.set form 1 y)
+  (aset form 1 y)
   form)
 
 (def sym symbol)
@@ -193,7 +193,7 @@
 (defn map-get [m k]
   (if (= m bel-nil)
     bel-nil
-    (or (.get m k) bel-nil)))
+    (or (get m k) (gobj/get m k) bel-nil)))
 
 (defn map-assoc [m k v]
   (let [m' (if (= bel-nil m) {} m)]
