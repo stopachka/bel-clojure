@@ -9,19 +9,91 @@
           BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell,
           "Open Sans", sans-serif;
       }
+      .main {
+        display: flex;
+      }
+      .right {
+        flex: 1;
+      }
+      #output {
+        text-align: left;
+      }
     </style>
   </head>
   <body>
     <div>
-      <h3>Bel</h3>
-      <p>Welcome to Bel!</p>
-      <form id="repl">
-        <textarea id="textarea" placeholder="Type away"></textarea>
-        <button>Eval</button>
-      </form>
-      <pre id="output">
+      <div class="main">
+        <div class="left">
+          <h3>Welcome to Bel</h3>
+          <form id="repl">
+            <div>
+              <textarea id="textarea" placeholder="Type away"></textarea>
+            </div>
+            <button>Eval</button>
+          </form>
+          <div>
+            <p>Here are some forms you can paste to play:</p>
+            <pre>
+(cons 'a 'b '(c d e))
+
+(cons \h "ello")
+
+(2 '(a b c))
+
+(set w '(a (b c) d (e f)))
+
+(find pair w)
+
+(pop (find pair w))
+
+w
+
+(map (upon 2 3) (list + - * /))
+
+(let x 'a
+    (cons x 'b))
+
+(with (x 1 y 2)
+    (+ x y))
+
+(let ((x y) . z) '((a b) c)
+    (list x y z))
+
+((fn (x) (cons x 'b)) 'a)
+
+((fn (x|symbol) (cons x 'b)) 'a)
+
+((fn (x|int) (cons x 'b)) 'a)
+
+((fn (f x|f) (cons x 'b)) sym 'a)
+
+((macro (v) `(set ,v 7)) x)
+
+x
+
+(apply or '(t nil))
+
+(best (of > len) '((a b) (a b c d) (a) (a b c)))
+
+(do (thread (do (join 'a 'b)))
+    (thread (do (join 'a 'b) (join 'b 'd))))
+
+(do (thread (do (join 'a 'b)))
+    (thread
+      (atomic (do (join 'a 'b) (join 'b 'd)))))
+
+            </pre>
+            You can also look at tests <a href="" target="_blank">here</a> to
+            try other forms
+          </div>
+        </div>
+        <div class="right">
+          <pre id="output">
         ;; Loading Bel...
-      </pre>
+        </pre
+          >
+        </div>
+      </div>
     </div>
     <script src="/js/main.js"></script>
   </body>
