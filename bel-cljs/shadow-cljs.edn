@@ -14,7 +14,11 @@
  :builds
  {:frontend
   {:target :browser
-   :modules {:main {:init-fn bel.core/-main}}}
+   :modules {:main {:init-fn bel.core/-main}}
+   
+   ;; Here is some production config
+   :release {:compiler-options {:optimizations :simple}}
+   }
   :test
   {:target    :browser-test
    :test-dir  "out/test"
