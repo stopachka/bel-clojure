@@ -4,3 +4,4 @@
 .nrepl-port
 .clj-kondo
 .DS_Store
+out
