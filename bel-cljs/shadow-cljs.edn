@@ -1,14 +1,21 @@
 {:source-paths
- ["src/dev"
+ ["resources"
+  "src/dev"
   "src/main"
   "src/test"]
 
  :dependencies
- [[instaparse "1.4.12"]]
+ [[cider/cider-nrepl "0.24.0"]
+  [instaparse "1.4.12"]]
 
  :dev-http {8080 "public"}
 
  :builds
  {:frontend
   {:target :browser
-   :modules {:main {:init-fn bel.core/-main}}}}}
+   :modules {:main {:init-fn bel.core/-main}}}
+  :test
+  {:target    :browser-test
+   :test-dir  "out/test"
+   :ns-regexp "-test$"
+   :autorun   true}}}

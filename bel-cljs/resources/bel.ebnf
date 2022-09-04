@@ -1,0 +1,20 @@
+sexp = string | list | abbrev_fn | quote | backquote | comma | splice | char | symbol | dot | number | comp_sym
+list = lparen sexp? (<whitespace> sexp)* rparen
+abbrev_fn = <'['> sexp? (<whitespace> sexp)* <']'>
+comp_sym = symbol (comp_id* symbol)* | (comp_id* symbol) (comp_id* symbol)*
+comp_id = (':' | '!' | '.' | '~' | ':' | '|')
+<lparen> = <'('>
+<rparen> = <')'>
+string = <'"'> any_char* <'"'>
+char = <'\\'> name
+symbol = name
+dot = #'\.'
+quote = <'\''> sexp
+backquote = <'`'> sexp
+comma = <','> sexp
+splice = <',@'> sexp
+name = #'[a-zA-Z\-*+_=>\/<\^][a-zA-Z0-9\-*+_=>\/<\^\?]*'
+number = #'[+-]?[0-9][0-9]*[.]?[0-9]*'
+any_char = #'.' | space
+space = #'\s'
+whitespace = #'\s+'

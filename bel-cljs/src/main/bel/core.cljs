@@ -1,5 +1,7 @@
-(ns bel.core)
+(ns bel.core
+  (:require [bel.model :as m]
+            [bel.reader :as r]))
 
 (defn -main []
-  (println "hello"))
+  (println "hello" m/p r/bel-ebnf))
 
