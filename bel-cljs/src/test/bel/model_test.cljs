@@ -23,9 +23,8 @@
   (is (= (pretty-f cdr "\"foo\"") '(\o \o)))
   (is (= (pretty-f type "a") 'symbol))
   (is (= (pretty-f type "(a b)") 'pair))
-  ;; TODO: there are no chars in js
-  #_(is (= (pretty-f type "\\a") 'char))
-  (is (= (pretty-f type "\"a\"") 'string))
+  (is (= (pretty-f type "\\a") 'char))
+  (is (= (pretty-f type "\"ab\"") 'string))
   (let [p (r/parse "(a . b)")
         c (r/parse "c")]
     (xar p c)

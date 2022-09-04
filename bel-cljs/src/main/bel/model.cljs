@@ -17,7 +17,11 @@
 ;; primitive types
 
 (def string? clj-string?)
-(def char? clj-char?)
+
+;; hack: js does not have chars. We need to be careful
+(defn char? [x]
+  (and (string? x) (= (count x) 1)))
+
 (def symbol? clj-symbol?)
 (def number? clj-number?)
 
@@ -29,9 +33,9 @@
 (defn type-nilable [x]
   (cond
     (symbol? x) 'symbol
-    (string? x) 'string
     (char? x) 'char
     (number? x) 'number
+    (string? x) 'string
     (pair? x) 'pair
     (mut-map? x) 'mut-map
     (imm-map? x) 'imm-map
